@@ -1,8 +1,8 @@
 # Makefile for fastjet timing executable
 # Adjust these options for your system, in particulat to point to
 # the FastJet and HepMC3 install areas
-HEPMC3_DIR=/opt
-FASTJET_DIR=/opt
+HEPMC3_DIR=$(HOME)/.local/fastjet
+FASTJET_DIR=$(HOME)/.local/fastjet
 
 .PHONY: all clean
 
@@ -12,7 +12,7 @@ CXXFLAGS+=-O2 -ggdb --std=c++17
 all: fastjet-finder
 
 clean:
-	$(RM) fastjet-finder *.o *.d *.dSYM
+	$(RM) -r fastjet-finder *.o *.d *.dSYM
 
 SRC = fastjet-finder.cc
 

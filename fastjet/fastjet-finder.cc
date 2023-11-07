@@ -93,7 +93,7 @@ int main(int argc, char* argv[]) {
   int power = -1;
   string dump_file = "";
 
-  string usage = " <HepMC3_input_file> [-h] [-m max_events] [-n trials] [-s strategy] [-p power] [-d dump_file]";
+  string usage = " [-h] [-m max_events] [-n trials] [-s strategy] [-p power] [-d dump_file] <HepMC3_input_file>";
 
   int opt;
   while ((opt = getopt(argc, argv, "m:n:s:p:d:h")) != -1) {
@@ -132,7 +132,14 @@ int main(int argc, char* argv[]) {
   }
 
   if (optind >= argc) {
-    std::cerr << "Expected EVENTS_FILE argument after options" << std::endl;
+    std::cerr << "No <HepMC3_input_file> argument after options" << std::endl;
+    std::cout << "Usage: " << argv[0] << usage << std::endl;
+    exit(EXIT_FAILURE);
+  }
+  if (optind < argc-1) {
+    std::cerr << "Unexpected arguments after HepMC3 file (which must be the last argument):" << std::endl;
+    for (auto arg = optind+1; arg != argc; arg++) cout << " " << argv[arg];
+    cout << endl;
     std::cout << "Usage: " << argv[0] << usage << std::endl;
     exit(EXIT_FAILURE);
   }
@@ -144,7 +151,6 @@ int main(int argc, char* argv[]) {
   auto events = read_input_events(input_file.c_str(), maxevents);
   
   // Set strategy
-  std::cout << mystrategy << endl;
   fastjet::Strategy strategy = fastjet::Best;
   if (mystrategy == string("N2Plain")) {
     strategy = fastjet::N2Plain;
