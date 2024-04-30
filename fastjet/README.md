@@ -1,33 +1,54 @@
-# FastJet Test Application
+# FastJet Test Applications
 
-This code compiles a small FastJet application that is used for benchmarking and
-validation of alternative implementations of clustering algorithms.
+This code compiles a few small FastJet applications that are used for
+benchmarking and validation of alternative implementations of clustering
+algorithms.
 
 The code requires the fastjet libraries (<https://fastjet.fr/>) as well as those
 from HepMC3 (<https://gitlab.cern.ch/hepmc/HepMC3>).
 
-Once FastJet and HepMC3 are available compile `chep-polyglot-jets.cc` and link
-against the relevant libraries. See the `Makefile` for an indication of more or
-less how to do that.
+Depending on your system setup you make need to add the path to the HepMC3 CMake
+setup files to `CMAKE_PREFIX_PATH`.
 
-Run the application with no arguments to understand the command line parameters.
+## Compilation
 
-Running like this:
-
-```sh
-./chep-polyglot-jets ../data/events.hepmc3 100 100 N2Tiled   
-```
-
-Would benchmark the N2Tiled strategy against the 100 *benchmark* events, running
-100 times.
+Configure and compile using CMake in the standard way, e.g.,
 
 ```sh
-./chep-polyglot-jets ../data/events.hepmc3 100 1 N2Tiled 1 1 > inclusivekt.out
+cmake -S . -B build
+cmake --build build
 ```
 
-Would use the *inclusive kt* algorithm ($p=1$) and dump the final jet
-constituents to `inclusivekt.out`.
+## Applications
 
-Then the script `fastjet-output2json.py` can be used to process this into JSON
-that can be used more easily in tests to check consistency between FastJet and
-other implementations.
+### `fastjet-inclusive`
+
+`fastjet-inclusive` will run fastjet with the standard suite of pp algorithms,
+optionally outputting a list of inclusive jets. This is the standard executable
+used to benchmark fastjet.
+
+```sh
+Usage: ./fastjet-inclusive [-h] [-m max_events] [-n trials] [-s strategy] [-p power] [-d dump_file] <HepMC3_input_file>
+ HepMC3_input_file: File with input events in HepMC3 format
+ -m max_events: default is -1, which is all the events in the file
+ -n trials: default is 8, which is the number of repeats to do
+ -s strategy: valid values are 'Best' (default), 'N2Plain', 'N2Tiled'
+ -p power: -1=antikt, 0=cambridge_achen, 1=inclusive kt
+ -R size: R parameter, cone size (default = 0.4)
+ -P pt_min: minimum pt for inclusive jet output (default = 5.0)
+ -d dump_file: output jets are printed to here (use '-' for stdout)
+ -h: print this message
+ ```
+
+### `fastjet-exclusive`
+
+`fastjet-exclusive` is used to generate exclusive jet outputs for validation.
+
+### `fastjet2json.jl`
+
+`fastjet2json.jl` converts the text output from the fastjet applications into a
+JSON format, more suitable for integration tests.
+
+```sh
+julia --project=.. fastjet2json.jl fastjet_output_file json_output
+```
