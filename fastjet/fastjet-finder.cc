@@ -1,11 +1,11 @@
-// fastejet-finder.cc
-// MIT Licenced, Copyright (c) 2023 CERN
+// fastjet-finder.cc
+// MIT Licenced, Copyright (c) 2023-2024 CERN
 //
 // Code to run and time the jet finding of against various
 // HepMC3 input files
 
 // Original version of this code Philippe Gras, IRFU
-// Modified by Graeme Stewart, CERN
+// Modified by Graeme A Stewart, CERN
 
 #include "fastjet/ClusterSequence.hh"
 #include <iostream> // needed for io
@@ -67,10 +67,9 @@ vector<vector<fastjet::PseudoJet>> read_input_events(const char* fname, long max
 }
 
 vector<fastjet::PseudoJet> run_fastjet_clustering(std::vector<fastjet::PseudoJet> input_particles,
-  fastjet::Strategy strategy, fastjet::JetAlgorithm algorithm) {
+  fastjet::Strategy strategy, fastjet::JetAlgorithm algorithm, double R, double ptmin) {
   // create a jet definition: a jet algorithm with a given radius parameter
   fastjet::RecombinationScheme recomb_scheme=fastjet::E_scheme;
-  double R = 0.4;
   fastjet::JetDefinition jet_def(algorithm, R, recomb_scheme, strategy);
 
 
@@ -78,7 +77,6 @@ vector<fastjet::PseudoJet> run_fastjet_clustering(std::vector<fastjet::PseudoJet
   fastjet::ClusterSequence clust_seq(input_particles, jet_def);
 
   // // get the resulting jets ordered in pt
-  double ptmin = 5.0;
   vector<fastjet::PseudoJet> inclusive_jets = sorted_by_pt(clust_seq.inclusive_jets(ptmin));
 
   return inclusive_jets;
@@ -91,12 +89,16 @@ int main(int argc, char* argv[]) {
   string mystrategy = "Best";
   bool dump = false;
   int power = -1;
+  double R = 0.4;
+  double ptmin = 0.5;
+  int njets = -1;
+  double dmin = 0.0;
   string dump_file = "";
 
   string usage = " [-h] [-m max_events] [-n trials] [-s strategy] [-p power] [-d dump_file] <HepMC3_input_file>";
 
   int opt;
-  while ((opt = getopt(argc, argv, "m:n:s:p:d:h")) != -1) {
+  while ((opt = getopt(argc, argv, "m:n:s:p:d:R:P:h")) != -1) {
     switch(opt) {
       case 'm':
         maxevents = stoi(optarg);
@@ -110,6 +112,12 @@ int main(int argc, char* argv[]) {
       case 'p':
         power = stoi(optarg);
         break;
+      case 'R':
+        R = stod(optarg);
+        break;
+      case 'P':
+        ptmin = stod(optarg);
+        break;
       case 'd':
         dump_file = string(optarg);
         dump = true;
@@ -121,7 +129,9 @@ int main(int argc, char* argv[]) {
         std::cout << " -n trials: default is " << trials << ", which is the number of repeats to do" << std::endl;
         std::cout << " -s strategy: valid values are 'Best' (default), 'N2Plain', 'N2Tiled'" << std::endl;
         std::cout << " -p power: -1=antikt, 0=cambridge_achen, 1=inclusive kt" << std::endl;
-        std::cout << " -d dump_file: output jets are printed to here" << std::endl;
+        std::cout << " -R size: R parameter, cone size (default = 0.4)" << std::endl;
+        std::cout << " -P pt_min: minimum pt for inclusive jet output (default = 5.0)" << std::endl;
+        std::cout << " -d dump_file: output jets are printed to here (use '-' for stdout)" << std::endl;
         std::cout << " -h: print this message"  << std::endl;
         exit(-1);
         break;
@@ -169,7 +179,7 @@ int main(int argc, char* argv[]) {
 
   auto dump_fh = stdout;
   if (dump) {
-    if (dump_file != "") {
+    if (dump_file != "-") {
       dump_fh = fopen(dump_file.c_str(), "w");
     }
   }
@@ -182,7 +192,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Trial " << trial << " ";
     auto start_t = std::chrono::steady_clock::now();
     for (size_t ievt = 0; ievt < events.size(); ++ievt) {
-      auto inclusive_jets = run_fastjet_clustering(events[ievt], strategy, algorithm);
+      auto inclusive_jets = run_fastjet_clustering(events[ievt], strategy, algorithm, R, ptmin);
 
       if (dump) {
          fprintf(dump_fh, "Jets in processed event %zu\n", ievt+1);
