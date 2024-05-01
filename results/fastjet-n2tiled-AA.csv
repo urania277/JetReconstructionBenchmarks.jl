@@ -1,0 +1,5 @@
+File,mean_particles,File_path,n_samples,time_per_event
+events-AA-OO.hepmc3,833.12,../data/events-AA-OO.hepmc3,8,991.95
+events-AA-CuCu.hepmc3,3045.2,../data/events-AA-CuCu.hepmc3,8,14155.3
+events-AA-AuAu.hepmc3,10307.65,../data/events-AA-AuAu.hepmc3,8,145970.0
+events-AA-PbPb.hepmc3,12006.21,../data/events-AA-PbPb.hepmc3,8,201645.0

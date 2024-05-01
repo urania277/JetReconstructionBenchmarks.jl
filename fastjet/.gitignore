@@ -1,6 +1,6 @@
-chep-polyglot-jets
 *.d
 *.dSYM
 fastjet-finder
 *.out
 *.json
+build

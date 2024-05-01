@@ -4,6 +4,7 @@ using ArgParse
 using LorentzVectorHEP
 using Statistics
 using UnicodePlots
+using Logging
 
 struct Particle{T}
     momentum::LorentzVector{T}
@@ -102,6 +103,14 @@ parse_command_line(args) = begin
 		arg_type = Int
 		default = 0
 
+		"--info"
+		help = "Print info level log messages"
+		action = :store_true
+
+		"--debug"
+		help = "Print debug level log messages"
+		action = :store_true
+
 		"files"
 		help = "The HepMC3 event files to read."
 		required = true
@@ -113,13 +122,22 @@ end
 
 function main()
     args = parse_command_line(ARGS)
+    if args[:debug]
+		logger = ConsoleLogger(stdout, Logging.Debug)
+	elseif args[:info]
+		logger = ConsoleLogger(stdout, Logging.Info)
+	else
+		logger = ConsoleLogger(stdout, Logging.Warn)
+	end
+	global_logger(logger)
     
     for file in args[:files]
         events = read_events(file, args[:maxevents], args[:skip])
         n_events = length(events)
         n_particles = Int[]
-        for e in events
+        for (i, e) ∈ enumerate(events)
             push!(n_particles, length(e))
+            @info "Event $(i) - $(length(e))"
         end
         average_n = mean(n_particles)
         if args[:summary]
