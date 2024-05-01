@@ -50,5 +50,5 @@ Usage: ./fastjet-inclusive [-h] [-m max_events] [-n trials] [-s strategy] [-p po
 JSON format, more suitable for integration tests.
 
 ```sh
-julia --project=.. fastjet2json.jl fastjet_output_file json_output
+julia --project=.. fastjet2json.jl fastjet_input_file json_output_file
 ```

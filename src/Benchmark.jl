@@ -48,15 +48,26 @@ function jet_process_avg_time(
 		end
 	end
 
+	# Threading?
+	threads = Threads.nthreads()
+	if threads > 1
+		@info "Will use $threads threads"
+	end
+
 	# Now setup timers and run the loop
 	cummulative_time = 0.0
 	cummulative_time2 = 0.0
 	lowest_time = typemax(Float64)
+	finaljets = Vector{Vector{PseudoJet}}(undef, threads)
+	fj = Vector{Vector{FinalJet}}(undef, threads)
+
 	for irun ∈ 1:nsamples
 		t_start = time_ns()
-		for (ievt, event) in enumerate(event_vector)
-			finaljets, _ = jet_reconstruction(event, R = distance, p = power, ptmin=ptmin)
-			fj = final_jets(finaljets, ptmin)
+		Threads.@threads for event in event_vector
+			my_t = Threads.threadid()
+			jet_reconstruction(event, R = distance, p = power, ptmin=ptmin)
+			# finaljets[my_t], _ = jet_reconstruction(event, R = distance, p = power, ptmin=ptmin)
+			# final_jets(finaljets[my_t], ptmin)
 		end
 		t_stop = time_ns()
 		dt_μs = convert(Float64, t_stop - t_start) * 1.e-3
