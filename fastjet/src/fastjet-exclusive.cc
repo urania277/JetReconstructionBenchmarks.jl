@@ -52,9 +52,6 @@ int main(int argc, char* argv[]) {
   string mystrategy = "Best";
   int power = -1;
   double R = 0.4;
-  double ptmin = 0.5;
-  int njets = -1;
-  double dijmin = 0.0;
   string dump_file = "";
 
   OptionParser opts("Allowed options");
@@ -89,33 +86,13 @@ int main(int argc, char* argv[]) {
     std::cerr << "Only one <HepMC3_input_file> supported" << std::endl;
   }
 
-  auto final_jets_conflict = false;
-  if (ptmin_option->is_set()) {
-    if (dijmin_option->is_set() || njets_option->is_set()) {
-      final_jets_conflict = true; 
-    } else {
-      ptmin = ptmin_option->value();
-    }
-  }
-  if (dijmin_option->is_set()) {
-    if (ptmin_option->is_set() || njets_option->is_set()) {
-      final_jets_conflict = true; 
-    } else {
-      dijmin = dijmin_option->value();
-    }
-  }
-  if (njets_option->is_set()) {
-    if (dijmin_option->is_set() || ptmin_option->is_set()) {
-      final_jets_conflict = true; 
-    } else {
-      njets = njets_option->value();
-    }
-  }
-  if (final_jets_conflict) {
-    cerr << "Only one of ptmin, dijmin or njets can be specified" << endl;
+  // Check we only have 1 option for final jet selection
+  auto sum = int(njets_option->is_set()) + int(dijmin_option->is_set()) + int(ptmin_option->is_set());
+  if (sum != 1) {
+    cerr << "One, and only one, of ptmin, dijmin or njets needs to be specified (currently " <<
+      sum << ")" << endl;
     exit(EXIT_FAILURE);
   }
-
 
   // read in input events
   //----------------------------------------------------------
@@ -140,7 +117,7 @@ int main(int argc, char* argv[]) {
 
   auto dump_fh = stdout;
   if (dump_option->is_set()) {
-    if (dump_option->value() != "") {
+    if (dump_option->value() != "-") {
       dump_fh = fopen(dump_option->value().c_str(), "w");
     }
   }
@@ -157,11 +134,11 @@ int main(int argc, char* argv[]) {
 
       vector<fastjet::PseudoJet> final_jets;
       if (ptmin_option->is_set()) {
-        final_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin));
+        final_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin_option->value()));
       } else if (dijmin_option->is_set()) {
-        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmin));
+        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmin_option->value()));
       } else if (njets_option->is_set()) {
-        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets));
+        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets_option->value()));
       }
 
       if (dump_option->is_set()) {
