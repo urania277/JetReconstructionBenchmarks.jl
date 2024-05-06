@@ -29,3 +29,18 @@ target_link_libraries(fastjet-inclusive
     ${FASTJET_LIBRARIES}
 )
 
+# fastjet-exlusive runs reconstruction then finds exclusive jets
+add_executable(fastjet-exclusive
+    src/fastjet-exclusive.cc
+    src/fastjet-utils.cc
+)
+
+target_include_directories(fastjet-exclusive PRIVATE
+    ${FASTJET_INCLUDE_DIRS}
+)
+
+target_link_libraries(fastjet-exclusive 
+    ${HEPMC3_LIBRARIES}
+    ${FASTJET_LIBRARIES}
+)
+
