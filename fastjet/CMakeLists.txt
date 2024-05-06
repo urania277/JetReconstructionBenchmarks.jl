@@ -14,33 +14,18 @@ find_package(FastJet REQUIRED)
 
 set(CMAKE_CXX_STANDARD 17)
 
-# fastjet-inclusive runs reconstruction then finds inclusive jets
-add_executable(fastjet-inclusive
-    src/fastjet-inclusive.cc
+# Fastjet executable runs reconstruction then outputs either
+# exclusive or inclusive jets
+add_executable(fastjet-finder
+    src/fastjet-finder.cc
     src/fastjet-utils.cc
 )
 
-target_include_directories(fastjet-inclusive PRIVATE
+target_include_directories(fastjet-finder PRIVATE
     ${FASTJET_INCLUDE_DIRS}
 )
 
-target_link_libraries(fastjet-inclusive 
+target_link_libraries(fastjet-finder 
     ${HEPMC3_LIBRARIES}
     ${FASTJET_LIBRARIES}
 )
-
-# fastjet-exlusive runs reconstruction then finds exclusive jets
-add_executable(fastjet-exclusive
-    src/fastjet-exclusive.cc
-    src/fastjet-utils.cc
-)
-
-target_include_directories(fastjet-exclusive PRIVATE
-    ${FASTJET_INCLUDE_DIRS}
-)
-
-target_link_libraries(fastjet-exclusive 
-    ${HEPMC3_LIBRARIES}
-    ${FASTJET_LIBRARIES}
-)
-

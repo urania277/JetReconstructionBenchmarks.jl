@@ -62,7 +62,7 @@ int main(int argc, char* argv[]) {
   auto power_option = opts.add<Value<int>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_achen, 1=inclusive kt", power, &power);
   auto radius_option = opts.add<Value<double>>("R", "radius", "Algorithm R parameter", R, &R);
   auto ptmin_option = opts.add<Value<double>>("P", "ptmin", "pt cut for inclusive jets");
-  auto dijmin_option = opts.add<Value<double>>("", "dijmin", "dijmin value for exclusive jets");
+  auto dijmax_option = opts.add<Value<double>>("", "dijmax", "dijmax value for exclusive jets");
   auto njets_option = opts.add<Value<int>>("", "njets", "njets value for exclusive jets");
   auto dump_option = opts.add<Value<string>>("d", "dump", "Filename to dump jets to");
 
@@ -72,7 +72,7 @@ int main(int argc, char* argv[]) {
     cout << argv[0] << " [options] HEPMC3_INPUT_FILE" << endl;
     cout << endl;
 	  cout << opts << "\n";
-    cout << "Note the only one of ptmin, dijmin or njets can be specified!\n" << endl;
+    cout << "Note the only one of ptmin, dijmax or njets can be specified!\n" << endl;
     exit(EXIT_SUCCESS);
   }
 
@@ -87,9 +87,9 @@ int main(int argc, char* argv[]) {
   }
 
   // Check we only have 1 option for final jet selection
-  auto sum = int(njets_option->is_set()) + int(dijmin_option->is_set()) + int(ptmin_option->is_set());
+  auto sum = int(njets_option->is_set()) + int(dijmax_option->is_set()) + int(ptmin_option->is_set());
   if (sum != 1) {
-    cerr << "One, and only one, of ptmin, dijmin or njets needs to be specified (currently " <<
+    cerr << "One, and only one, of ptmin, dijmax or njets needs to be specified (currently " <<
       sum << ")" << endl;
     exit(EXIT_FAILURE);
   }
@@ -135,8 +135,8 @@ int main(int argc, char* argv[]) {
       vector<fastjet::PseudoJet> final_jets;
       if (ptmin_option->is_set()) {
         final_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin_option->value()));
-      } else if (dijmin_option->is_set()) {
-        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmin_option->value()));
+      } else if (dijmax_option->is_set()) {
+        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmax_option->value()));
       } else if (njets_option->is_set()) {
         final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets_option->value()));
       }
