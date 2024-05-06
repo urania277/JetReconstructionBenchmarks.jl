@@ -54,7 +54,7 @@ int main(int argc, char* argv[]) {
   double R = 0.4;
   double ptmin = 0.5;
   int njets = -1;
-  double dmin = 0.0;
+  double dijmin = 0.0;
   string dump_file = "";
 
   OptionParser opts("Allowed options");
@@ -64,9 +64,10 @@ int main(int argc, char* argv[]) {
   auto strategy_option = opts.add<Value<string>>("s", "strategy", "Valid values are 'Best' (default), 'N2Plain', 'N2Tiled'", mystrategy, &mystrategy);
   auto power_option = opts.add<Value<int>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_achen, 1=inclusive kt", power, &power);
   auto radius_option = opts.add<Value<double>>("R", "radius", "Algorithm R parameter", R, &R);
-  auto ptmin_option = opts.add<Value<double>>("P", "ptmin", "pt cut for inclusive jets", ptmin, &ptmin);
+  auto ptmin_option = opts.add<Value<double>>("P", "ptmin", "pt cut for inclusive jets");
+  auto dijmin_option = opts.add<Value<double>>("", "dijmin", "dijmin value for exclusive jets");
+  auto njets_option = opts.add<Value<int>>("", "njets", "njets value for exclusive jets");
   auto dump_option = opts.add<Value<string>>("d", "dump", "Filename to dump jets to");
-
 
   opts.parse(argc, argv);
 
@@ -74,6 +75,7 @@ int main(int argc, char* argv[]) {
     cout << argv[0] << " [options] HEPMC3_INPUT_FILE" << endl;
     cout << endl;
 	  cout << opts << "\n";
+    cout << "Note the only one of ptmin, dijmin or njets can be specified!\n" << endl;
     exit(EXIT_SUCCESS);
   }
 
@@ -86,6 +88,34 @@ int main(int argc, char* argv[]) {
   } else {
     std::cerr << "Only one <HepMC3_input_file> supported" << std::endl;
   }
+
+  auto final_jets_conflict = false;
+  if (ptmin_option->is_set()) {
+    if (dijmin_option->is_set() || njets_option->is_set()) {
+      final_jets_conflict = true; 
+    } else {
+      ptmin = ptmin_option->value();
+    }
+  }
+  if (dijmin_option->is_set()) {
+    if (ptmin_option->is_set() || njets_option->is_set()) {
+      final_jets_conflict = true; 
+    } else {
+      dijmin = dijmin_option->value();
+    }
+  }
+  if (njets_option->is_set()) {
+    if (dijmin_option->is_set() || ptmin_option->is_set()) {
+      final_jets_conflict = true; 
+    } else {
+      njets = njets_option->value();
+    }
+  }
+  if (final_jets_conflict) {
+    cerr << "Only one of ptmin, dijmin or njets can be specified" << endl;
+    exit(EXIT_FAILURE);
+  }
+
 
   // read in input events
   //----------------------------------------------------------
@@ -124,16 +154,24 @@ int main(int argc, char* argv[]) {
     auto start_t = std::chrono::steady_clock::now();
     for (size_t ievt = 0; ievt < events.size(); ++ievt) {
       auto cluster_sequence = run_fastjet_clustering(events[ievt], strategy, algorithm, R);
-      vector<fastjet::PseudoJet> inclusive_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin));
+
+      vector<fastjet::PseudoJet> final_jets;
+      if (ptmin_option->is_set()) {
+        final_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin));
+      } else if (dijmin_option->is_set()) {
+        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmin));
+      } else if (njets_option->is_set()) {
+        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets));
+      }
 
       if (dump_option->is_set()) {
          fprintf(dump_fh, "Jets in processed event %zu\n", ievt+1);
     
         // print out the details for each jet
-        for (unsigned int i = 0; i < inclusive_jets.size(); i++) {
+        for (unsigned int i = 0; i < final_jets.size(); i++) {
           fprintf(dump_fh, "%5u %15.10f %15.10f %15.10f\n",
-          i, inclusive_jets[i].rap(), inclusive_jets[i].phi(),
-          inclusive_jets[i].perp());
+          i, final_jets[i].rap(), final_jets[i].phi(),
+          final_jets[i].perp());
         }
       }
     }
