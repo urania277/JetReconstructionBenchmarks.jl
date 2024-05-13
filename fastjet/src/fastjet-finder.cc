@@ -1,4 +1,4 @@
-// fastejet-finder.cc
+// fastjet-finder.cc
 // MIT Licenced, Copyright (c) 2023-2024 CERN
 //
 // Code to run and time the jet finding of against various
@@ -45,10 +45,22 @@ fastjet::ClusterSequence run_fastjet_clustering(std::vector<fastjet::PseudoJet> 
   return clust_seq;
 }
 
+void dump_clusterseq(fastjet::ClusterSequence clust_seq) {
+  // Print out the contents of the cluster sequence, for debug purposes
+  auto history = clust_seq.history();
+  auto ihistory = 1; // N.B. Counted from 1 (match to Julia array)
+  for (auto he: history) {
+    std::cout << ihistory << ": " <<
+      he.parent1 << " " << he.parent2 << " " << he.child << " " << 
+      he.dij << " " << he.max_dij_so_far << std::endl;
+    ihistory++;
+  }
+}
+
 int main(int argc, char* argv[]) {
   // Default values
   int maxevents = -1;
-  int trials = 8;
+  int trials = 1;
   string mystrategy = "Best";
   int power = -1;
   double R = 0.4;
@@ -59,12 +71,13 @@ int main(int argc, char* argv[]) {
   auto max_events_option = opts.add<Value<int>>("m", "maxevents", "Maximum events in file to process (-1 = all events)", maxevents, &maxevents);
   auto trials_option = opts.add<Value<int>>("n", "trials", "Number of repeated trials", trials, &trials);
   auto strategy_option = opts.add<Value<string>>("s", "strategy", "Valid values are 'Best' (default), 'N2Plain', 'N2Tiled'", mystrategy, &mystrategy);
-  auto power_option = opts.add<Value<int>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_achen, 1=inclusive kt", power, &power);
+  auto power_option = opts.add<Value<int>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_aachen, 1=inclusive kt", power, &power);
   auto radius_option = opts.add<Value<double>>("R", "radius", "Algorithm R parameter", R, &R);
-  auto ptmin_option = opts.add<Value<double>>("P", "ptmin", "pt cut for inclusive jets");
+  auto ptmin_option = opts.add<Value<double>>("", "ptmin", "pt cut for inclusive jets");
   auto dijmax_option = opts.add<Value<double>>("", "dijmax", "dijmax value for exclusive jets");
   auto njets_option = opts.add<Value<int>>("", "njets", "njets value for exclusive jets");
   auto dump_option = opts.add<Value<string>>("d", "dump", "Filename to dump jets to");
+  auto debug_clusterseq_option = opts.add<Switch>("c", "debug-clusterseq", "Dump cluster sequence history content");
 
   opts.parse(argc, argv);
 
@@ -149,6 +162,11 @@ int main(int argc, char* argv[]) {
           fprintf(dump_fh, "%5u %15.10f %15.10f %15.10f\n",
           i, final_jets[i].rap(), final_jets[i].phi(),
           final_jets[i].perp());
+        }
+
+        // Dump the cluster sequence history content as well?
+        if (debug_clusterseq_option->is_set()) {
+          dump_clusterseq(cluster_sequence);
         }
       }
     }
