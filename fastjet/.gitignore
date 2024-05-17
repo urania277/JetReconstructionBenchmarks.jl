@@ -4,3 +4,4 @@ fastjet-finder
 *.out
 *.json
 build
+results/

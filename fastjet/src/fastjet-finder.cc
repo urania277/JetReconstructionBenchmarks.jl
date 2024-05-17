@@ -154,7 +154,7 @@ int main(int argc, char* argv[]) {
         final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets_option->value()));
       }
 
-      if (dump_option->is_set()) {
+      if (dump_option->is_set() && trial==0) {
          fprintf(dump_fh, "Jets in processed event %zu\n", ievt+1);
     
         // print out the details for each jet
