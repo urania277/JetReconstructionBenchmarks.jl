@@ -149,6 +149,7 @@ int main(int argc, char* argv[]) {
       if (ptmin_option->is_set()) {
         final_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin_option->value()));
       } else if (dijmax_option->is_set()) {
+        cout << "dijmax: " << dijmax_option->value() << endl;
         final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmax_option->value()));
       } else if (njets_option->is_set()) {
         final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets_option->value()));

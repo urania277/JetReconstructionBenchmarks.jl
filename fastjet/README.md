@@ -21,28 +21,30 @@ cmake --build build
 
 ## Applications
 
-### `fastjet-inclusive`
+### `fastjet-finder`
 
-`fastjet-inclusive` will run fastjet with the standard suite of pp algorithms,
-optionally outputting a list of inclusive jets. This is the standard executable
-used to benchmark fastjet.
+`fastjet-finder` is the main application and will run fastjet with the standard
+suite of pp algorithms, optionally outputting a list of inclusive or exclusive
+jets. This is the standard executable used to benchmark fastjet.
 
 ```sh
-Usage: ./fastjet-inclusive [-h] [-m max_events] [-n trials] [-s strategy] [-p power] [-d dump_file] <HepMC3_input_file>
- HepMC3_input_file: File with input events in HepMC3 format
- -m max_events: default is -1, which is all the events in the file
- -n trials: default is 8, which is the number of repeats to do
- -s strategy: valid values are 'Best' (default), 'N2Plain', 'N2Tiled'
- -p power: -1=antikt, 0=cambridge_achen, 1=inclusive kt
- -R size: R parameter, cone size (default = 0.4)
- -P pt_min: minimum pt for inclusive jet output (default = 5.0)
- -d dump_file: output jets are printed to here (use '-' for stdout)
- -h: print this message
- ```
+./fastjet-finder [options] HEPMC3_INPUT_FILE
 
-### `fastjet-exclusive`
+Allowed options:
+  -h, --help                  produce help message
+  -m, --maxevents arg (=-1)   Maximum events in file to process (-1 = all events)
+  -n, --trials arg (=1)       Number of repeated trials
+  -s, --strategy arg (=Best)  Valid values are 'Best' (default), 'N2Plain', 'N2Tiled'
+  -p, --power arg (=-1)       Algorithm p value: -1=antikt, 0=cambridge_aachen, 1=inclusive kt
+  -R, --radius arg (=0.4)     Algorithm R parameter
+  --ptmin arg                 pt cut for inclusive jets
+  --dijmax arg                dijmax value for exclusive jets
+  --njets arg                 njets value for exclusive jets
+  -d, --dump arg              Filename to dump jets to
+  -c, --debug-clusterseq      Dump cluster sequence history content
 
-`fastjet-exclusive` is used to generate exclusive jet outputs for validation.
+Note the only one of ptmin, dijmax or njets can be specified!
+```
 
 ### `fastjet2json.jl`
 
