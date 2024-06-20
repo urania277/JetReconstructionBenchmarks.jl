@@ -13,38 +13,28 @@ using DataFrames
 using LorentzVectorHEP
 using JetReconstruction
 
+# Parsing for algorithm and strategy enums
+include(joinpath(@__DIR__, "parse-options.jl"))
+
 function jet_process_avg_time(
 	events::Vector{Vector{PseudoJet}};
 	ptmin::Float64 = 5.0,
 	distance::Float64 = 0.4,
-	power::Integer = -1,
-	strategy::JetRecoStrategy,
+	algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
+	strategy::RecoStrategy.Strategy,
 	nsamples::Integer = 1,
 )
 	@info "Will process $(size(events)[1]) events"
 
-	# Strategy
-	if (strategy == N2Plain)
-		jet_reconstruction = plain_jet_reconstruct
-	elseif (strategy == N2Tiled || stragegy == Best)
-		jet_reconstruction = tiled_jet_reconstruct
-	else
-		throw(ErrorException("Strategy not yet implemented"))
-	end
-
-	# Build internal EDM structures for timing measurements, if needed
-	# For N2Tiled and N2Plain this is unnecessary as both these reconstruction
-	# methods can process PseudoJets directly
-	if (strategy == N2Tiled) || (strategy == N2Plain)
-		event_vector = events
-	end
+    # Map algorithm to power
+    power = JetReconstruction.algorithm2power[algorithm]
 
 	# Warmup code if we are doing a multi-sample timing run
 	if nsamples > 1
 		@info "Doing initial warm-up run"
-		for event in event_vector
-			finaljets, _ = jet_reconstruction(event, R = distance, p = power)
-			final_jets(finaljets, ptmin)
+		for event in events
+			_ = inclusive_jets(jet_reconstruct(event, R = distance, p = power,
+											   strategy = strategy), ptmin)
 		end
 	end
 
@@ -63,11 +53,10 @@ function jet_process_avg_time(
 
 	for irun ∈ 1:nsamples
 		t_start = time_ns()
-		Threads.@threads for event in event_vector
+		Threads.@threads for event in events
 			my_t = Threads.threadid()
-			jet_reconstruction(event, R = distance, p = power, ptmin=ptmin)
-			# finaljets[my_t], _ = jet_reconstruction(event, R = distance, p = power, ptmin=ptmin)
-			# final_jets(finaljets[my_t], ptmin)
+            inclusive_jets(jet_reconstruct(event, R = distance, p = power,
+											   strategy = strategy), ptmin)
 		end
 		t_stop = time_ns()
 		dt_μs = convert(Float64, t_stop - t_start) * 1.e-3
@@ -122,15 +111,15 @@ parse_command_line(args) = begin
 		arg_type = Float64
 		default = 0.4
 
-		"--power"
-		help = "Distance measure momentum power (-1 - antikt; 0 - Cambridge/Achen; 1 - inclusive k_t)"
-		arg_type = Int
-		default = -1
+        "--algorithm", "-A"
+        help = """Algorithm to use for jet reconstruction: $(join(JetReconstruction.AllJetRecoAlgorithms, ", "))"""
+        arg_type = JetAlgorithm.Algorithm
+        default = JetAlgorithm.AntiKt
 
-		"--strategy"
-		help = "Strategy for the algorithm, valid values: Best, N2Plain, N2Tiled, N2TiledSoAGlobal, N2TiledSoATile"
-		arg_type = JetRecoStrategy
-		default = N2Plain
+        "--strategy", "-S"
+        help = """Strategy for the algorithm, valid values: $(join(JetReconstruction.AllJetRecoStrategies, ", "))"""
+        arg_type = RecoStrategy.Strategy
+        default = RecoStrategy.Best
 
 		"--nsamples", "-m"
 		help = "Number of measurement points to acquire."
@@ -160,18 +149,6 @@ parse_command_line(args) = begin
 	return parse_args(args, s; as_symbols = true)
 end
 
-
-function ArgParse.parse_item(::Type{JetRecoStrategy}, x::AbstractString)
-	if (x == "Best")
-		return JetRecoStrategy(0)
-	elseif (x == "N2Plain")
-		return JetRecoStrategy(1)
-	elseif (x == "N2Tiled")
-		return JetRecoStrategy(2)
-	else
-		throw(ErrorException("Invalid value for strategy: $(x)"))
-	end
-end
 
 main() = begin
 	args = parse_command_line(ARGS)
@@ -217,7 +194,7 @@ main() = begin
 		events::Vector{Vector{PseudoJet}} =
 			read_final_state_particles(event_file, maxevents = args[:maxevents], skipevents = args[:skip])
 		time_per_event = jet_process_avg_time(events, ptmin = args[:ptmin], distance = args[:distance], 
-			power = args[:power], strategy = args[:strategy],
+		algorithm = args[:algorithm], strategy = args[:strategy],
 			nsamples = samples)
 		push!(event_timing, time_per_event)
 		println("$(basename(event_file)), $time_per_event")
