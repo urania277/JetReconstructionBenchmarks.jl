@@ -5,6 +5,7 @@ using LorentzVectorHEP
 using Statistics
 using UnicodePlots
 using Logging
+using CodecZlib
 
 struct Particle{T}
     momentum::LorentzVector{T}
@@ -12,6 +13,11 @@ struct Particle{T}
     pdgid::Integer
     barcode::Integer
     vertex::Integer
+end
+
+struct FileSummary
+    filename::String
+    average_density::Float64
 end
 
 Particle{T}() where T = Particle(LorentzVector{T}(0., 0., 0., 0.), 0, 0, 0, 0)
@@ -70,6 +76,10 @@ end
 
 read_events(fname, maxevents=-1, skipevents=0) = begin
     f = open(fname)
+    if endswith(fname, ".gz")
+        @debug "Reading gzipped file $fname"
+        f = GzipDecompressorStream(f)
+    end
 
     events = Vector{LorentzVector}[]
 
@@ -131,6 +141,8 @@ function main()
 	end
 	global_logger(logger)
     
+    results = FileSummary[]
+
     for file in args[:files]
         events = read_events(file, args[:maxevents], args[:skip])
         n_events = length(events)
@@ -140,14 +152,18 @@ function main()
             @info "Event $(i) - $(length(e))"
         end
         average_n = mean(n_particles)
-        if args[:summary]
-            println("$(basename(file)),$average_n")
-        else
+        push!(results, FileSummary(basename(file), average_n))
+        if !args[:summary]
             println("File $file")
             println("  Number of events: $n_events")
             println("  Average number of particles: ", mean(n_particles))
             println(histogram(n_particles))
         end
+    end
+
+    sort!(results, by = x -> x.average_density)
+    for r in results
+        println(r.filename, ",", r.average_density)
     end
 end
 
