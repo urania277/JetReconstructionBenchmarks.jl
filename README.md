@@ -13,7 +13,7 @@ Example C++ application that runs fastjet for comparing with other implementatio
 
 TODO
 
-Pythia8 application to producing input HepMC3 files for testing.
+Pythia8 application for producing input HepMC3 files.
 
 ## `data`
 

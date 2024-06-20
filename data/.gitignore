@@ -1,5 +1,6 @@
+# Never store unpacked files
+# JetReconstruction will now transparently read .gz compressed files
 *.hepmc3
-*.gz
 
 # These files are just too big!
 events-AA-AuAu*

@@ -43,7 +43,7 @@ Allowed options:
   -d, --dump arg              Filename to dump jets to
   -c, --debug-clusterseq      Dump cluster sequence history content
 
-Note the only one of ptmin, dijmax or njets can be specified!
+Note that only one of ptmin, dijmax or njets can be specified!
 ```
 
 ### `fastjet2json.jl`
