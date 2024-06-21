@@ -19,8 +19,14 @@ using JetReconstruction
 @enumx T=Backend Backends Julia FastJet
 const AllBackends = [String(Symbol(x)) for x in instances(Backends.Backend)]
 
-# Parsing for algorithm and strategy enums
-include(joinpath(@__DIR__, "parse-options.jl"))
+# Parsing for EnumX types
+function ArgParse.parse_item(opt::DataType, x::AbstractString)
+    s = tryparse(opt, x)
+    if s === nothing
+        throw(ErrorException("Invalid value for enum: $(x)"))
+    end
+    s
+end
 
 function hepmc3gunzip(input_file::AbstractString)
     unpacked_file = replace(input_file, ".gz" => "")
