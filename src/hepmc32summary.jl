@@ -161,6 +161,7 @@ function main()
         end
     end
 
+    println("File,mean_particles")
     sort!(results, by = x -> x.average_density)
     for r in results
         println(r.filename, ",", r.average_density)

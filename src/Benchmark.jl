@@ -22,7 +22,7 @@ function jet_process_avg_time(
 	distance::Float64 = 0.4,
 	algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
 	strategy::RecoStrategy.Strategy,
-	nsamples::Integer = 1,
+	nsamples::Integer = 1
 )
 	@info "Will process $(size(events)[1]) events"
 
@@ -44,7 +44,7 @@ function jet_process_avg_time(
 		@info "Will use $threads threads"
 	end
 
-	# Now setup timers and run the loop
+    # Now setup timers and run the loop
 	cummulative_time = 0.0
 	cummulative_time2 = 0.0
 	lowest_time = typemax(Float64)
@@ -139,7 +139,7 @@ parse_command_line(args) = begin
 		action = :store_true
 
 		"--results"
-		help = "Write results in CSV format to this file"
+		help = "Write results in CSV format to this directory/file. If a directory is given, a file named 'julia-ALGORITHM-STRATEGY-RADIUS.csv' will be created."
 
 		"files"
 		help = "HepMC3 event files in to process or CSV file listing event files"
@@ -203,9 +203,14 @@ main() = begin
 	hepmc3_files_df[:, :time_per_event] = event_timing
 	println(hepmc3_files_df)
 
-	if !isnothing(args[:results])
-		CSV.write(args[:results], hepmc3_files_df)
-	end
+    # Write out the results
+    if isdir(args[:results])
+        results_file = joinpath(args[:results], "julia-$(args[:algorithm])-" *
+                                "$(args[:strategy])-$(args[:distance]).csv")
+    else
+        results_file = args[:results]
+    end
+    CSV.write(results_file, hepmc3_files_df)
 
 	nothing
 end
