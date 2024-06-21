@@ -33,7 +33,9 @@ function read_fastjet_file(f)
                 continue
             end
             _, rap, phi, pt = split(line)
-            push!(jets, Dict("rap" => parse(Float64, rap), "phi" => parse(Float64, phi), "pt" => parse(Float64, pt)))
+            push!(jets,
+                  Dict("rap" => parse(Float64, rap), "phi" => parse(Float64, phi),
+                       "pt" => parse(Float64, pt)))
         end
     end
     # Process last event

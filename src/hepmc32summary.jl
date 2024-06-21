@@ -20,7 +20,7 @@ struct FileSummary
     average_density::Float64
 end
 
-Particle{T}() where T = Particle(LorentzVector{T}(0., 0., 0., 0.), 0, 0, 0, 0)
+Particle{T}() where {T} = Particle(LorentzVector{T}(0.0, 0.0, 0.0, 0.0), 0, 0, 0, 0)
 
 """ Read a [HepMC3](https://doi.org/10.1016/j.cpc.2020.107310) ascii file.
 
@@ -28,13 +28,13 @@ Particle{T}() where T = Particle(LorentzVector{T}(0., 0., 0., 0.), 0, 0, 0, 0)
     maximum number of events to read (value -1 to read all availble events) and
     a number of events to skip at the beginning of the file can be provided.
 """
-function read_events(f, fin; maxevents=-1, skipevents=0)
+function read_events(f, fin; maxevents = -1, skipevents = 0)
     T = Float64
     particles = Particle{T}[]
     ievent = 0
     ipart = 0
     toskip = skipevents
-    
+
     for (il, l) in enumerate(eachline(fin))
         if occursin(r"HepMC::.*-END_EVENT_LISTING", l)
             break
@@ -64,17 +64,17 @@ function read_events(f, fin; maxevents=-1, skipevents=0)
             px = parse(T, tok[5])
             py = parse(T, tok[6])
             pz = parse(T, tok[7])
-            e =  parse(T, tok[8])
+            e = parse(T, tok[8])
             status = parse(Int, tok[10])
-            push!(particles, Particle{T}(LorentzVector(e,px,py,pz), status, pdgid, barcode, vertex))
+            push!(particles,
+                  Particle{T}(LorentzVector(e, px, py, pz), status, pdgid, barcode, vertex))
         end
     end
     #processing the last event:
     ievent > 0 && f(particles)
 end
 
-
-read_events(fname, maxevents=-1, skipevents=0) = begin
+function read_events(fname, maxevents = -1, skipevents = 0)
     f = open(fname)
     if endswith(fname, ".gz")
         @debug "Reading gzipped file $fname"
@@ -83,7 +83,7 @@ read_events(fname, maxevents=-1, skipevents=0) = begin
 
     events = Vector{LorentzVector}[]
 
-    read_events(f, maxevents=maxevents, skipevents=skipevents) do parts
+    read_events(f, maxevents = maxevents, skipevents = skipevents) do parts
         input_particles = LorentzVector[]
         for p in parts
             if p.status == 1
@@ -96,58 +96,57 @@ read_events(fname, maxevents=-1, skipevents=0) = begin
     events
 end
 
-parse_command_line(args) = begin
-	s = ArgParseSettings(autofix_names = true)
-	@add_arg_table! s begin
+function parse_command_line(args)
+    s = ArgParseSettings(autofix_names = true)
+    @add_arg_table! s begin
         "--summary"
         help = "Print only summary information, filename and average density"
         action = :store_true
 
-		"--maxevents", "-n"
-		help = "Maximum number of events to read. -1 to read all events from the  file."
-		arg_type = Int
-		default = -1
+        "--maxevents", "-n"
+        help = "Maximum number of events to read. -1 to read all events from the  file."
+        arg_type = Int
+        default = -1
 
-		"--skip", "-s"
-		help = "Number of events to skip at beginning of the file."
-		arg_type = Int
-		default = 0
+        "--skip", "-s"
+        help = "Number of events to skip at beginning of the file."
+        arg_type = Int
+        default = 0
 
-		"--info"
-		help = "Print info level log messages"
-		action = :store_true
+        "--info"
+        help = "Print info level log messages"
+        action = :store_true
 
-		"--debug"
-		help = "Print debug level log messages"
-		action = :store_true
+        "--debug"
+        help = "Print debug level log messages"
+        action = :store_true
 
-		"files"
-		help = "The HepMC3 event files to read."
-		required = true
+        "files"
+        help = "The HepMC3 event files to read."
+        required = true
         nargs = '+'
-	end
-	return parse_args(args, s; as_symbols = true)
+    end
+    return parse_args(args, s; as_symbols = true)
 end
-
 
 function main()
     args = parse_command_line(ARGS)
     if args[:debug]
-		logger = ConsoleLogger(stdout, Logging.Debug)
-	elseif args[:info]
-		logger = ConsoleLogger(stdout, Logging.Info)
-	else
-		logger = ConsoleLogger(stdout, Logging.Warn)
-	end
-	global_logger(logger)
-    
+        logger = ConsoleLogger(stdout, Logging.Debug)
+    elseif args[:info]
+        logger = ConsoleLogger(stdout, Logging.Info)
+    else
+        logger = ConsoleLogger(stdout, Logging.Warn)
+    end
+    global_logger(logger)
+
     results = FileSummary[]
 
     for file in args[:files]
         events = read_events(file, args[:maxevents], args[:skip])
         n_events = length(events)
         n_particles = Int[]
-        for (i, e) ∈ enumerate(events)
+        for (i, e) in enumerate(events)
             push!(n_particles, length(e))
             @info "Event $(i) - $(length(e))"
         end
