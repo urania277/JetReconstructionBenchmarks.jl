@@ -18,3 +18,11 @@ function ArgParse.parse_item(::Type{JetAlgorithm.Algorithm}, x::AbstractString)
     end
     s
 end
+
+function ArgParse.parse_item(::Type{Backends.Backend}, x::AbstractString)
+    s = tryparse(Backends.Backend, x)
+    if s === nothing
+        throw(ErrorException("Invalid value for backend: $(x)"))
+    end
+    s
+end

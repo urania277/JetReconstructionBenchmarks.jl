@@ -48,9 +48,9 @@ Note that only one of ptmin, dijmax or njets can be specified!
 
 ### `fastjet2json.jl`
 
-`fastjet2json.jl` converts the text output from the fastjet applications into a
-JSON format, more suitable for integration tests.
+`fastjet2json.jl` script converts the text output from the fastjet applications
+into a JSON format, more suitable for integration tests.
 
 ```sh
-julia --project=.. fastjet2json.jl fastjet_input_file json_output_file
+julia --project src/fastjet2json.jl fastjet_input_file json_output_file
 ```

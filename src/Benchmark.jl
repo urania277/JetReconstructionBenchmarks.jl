@@ -9,14 +9,33 @@ using Logging
 using JSON
 using CSV
 using DataFrames
+using EnumX
+using CodecZlib
 
 using LorentzVectorHEP
 using JetReconstruction
 
+# Backends for the jet reconstruction
+@enumx T=Backend Backends Julia FastJet
+const AllBackends = [String(Symbol(x)) for x in instances(Backends.Backend)]
+
 # Parsing for algorithm and strategy enums
 include(joinpath(@__DIR__, "parse-options.jl"))
 
-function jet_process_avg_time(
+function hepmc3gunzip(input_file::AbstractString)
+    unpacked_file = replace(input_file, ".gz" => "")
+    if !isfile(unpacked_file)
+        @info "Unpacking $(input_file) to $(unpacked_file)"
+        in = GzipDecompressorStream(open(input_file))
+        out = open(unpacked_file, "w")
+        write(out, in)
+        close(in)
+        close(out)
+    end
+    return unpacked_file
+end
+
+function julia_jet_process_avg_time(
 	events::Vector{Vector{PseudoJet}};
 	ptmin::Float64 = 5.0,
 	distance::Float64 = 0.4,
@@ -88,19 +107,39 @@ function jet_process_avg_time(
 	lowest_time
 end
 
+function fastjet_jet_process_avg_time(
+    input_file::AbstractString;
+	ptmin::Float64 = 5.0,
+	distance::Float64 = 0.4,
+	algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
+	strategy::RecoStrategy.Strategy,
+	nsamples::Integer = 1
+)
+
+    # FastJet reader cannot handle gzipped files
+    if endswith(input_file, ".gz")
+        event_file = hepmc3gunzip(input_file)
+    end
+
+    # Map algorithm to power
+    power = JetReconstruction.algorithm2power[algorithm]
+
+    # @warn "FastJet timing not implemented yet"
+    fj_bin = joinpath(@__DIR__, "..", "fastjet", "build", "fastjet-finder")
+    fj_args = String[]
+    push!(fj_args, "-p", string(power))
+    push!(fj_args, "-s", string(strategy))
+    push!(fj_args, "-R", string(distance))
+    push!(fj_args, "--ptmin", string(ptmin))
+
+    push!(fj_args, "-n", string(nsamples))
+    fj_output = read(`$fj_bin $fj_args $event_file`, String)
+    tryparse(Float64, match(r"Lowest time per event ([\d\.]+) us", fj_output)[1])
+end
+
 parse_command_line(args) = begin
 	s = ArgParseSettings(autofix_names = true)
 	@add_arg_table! s begin
-		"--maxevents", "-n"
-		help = "Maximum number of events to read. -1 to read all events from the  file."
-		arg_type = Int
-		default = -1
-
-		"--skip", "-s"
-		help = "Number of events to skip at beginning of the file."
-		arg_type = Int
-		default = 0
-
 		"--ptmin"
 		help = "Minimum p_t for final jets (GeV)"
 		arg_type = Float64
@@ -130,6 +169,11 @@ parse_command_line(args) = begin
 		help = "Override for sample number for specific event files"
 		nargs = '+'
 
+        "--backend"
+        help = """Backend to use for the jet reconstruction: $(join(AllBackends, ", "))"""
+        arg_type = Backends.Backend
+        default = Backends.Julia
+
 		"--info"
 		help = "Print info level log messages"
 		action = :store_true
@@ -139,7 +183,7 @@ parse_command_line(args) = begin
 		action = :store_true
 
 		"--results"
-		help = "Write results in CSV format to this directory/file. If a directory is given, a file named 'julia-ALGORITHM-STRATEGY-RADIUS.csv' will be created."
+		help = "Write results in CSV format to this directory/file. If a directory is given, a file named 'BACKEND-ALGORITHM-STRATEGY-RADIUS.csv' will be created."
 
 		"files"
 		help = "HepMC3 event files in to process or CSV file listing event files"
@@ -191,13 +235,19 @@ main() = begin
 		end
 		push!(n_samples, samples)
 
-		events::Vector{Vector{PseudoJet}} =
-			read_final_state_particles(event_file, maxevents = args[:maxevents], skipevents = args[:skip])
-		time_per_event = jet_process_avg_time(events, ptmin = args[:ptmin], distance = args[:distance], 
-		algorithm = args[:algorithm], strategy = args[:strategy],
-			nsamples = samples)
+        if args[:backend] == Backends.Julia
+            events::Vector{Vector{PseudoJet}} =
+			    read_final_state_particles(event_file)
+            time_per_event = julia_jet_process_avg_time(events, ptmin = args[:ptmin], distance = args[:distance], 
+		        algorithm = args[:algorithm], strategy = args[:strategy],
+			    nsamples = samples)
+        elseif args[:backend] == Backends.FastJet
+            time_per_event = fastjet_jet_process_avg_time(event_file, ptmin = args[:ptmin], distance = args[:distance],
+                algorithm = args[:algorithm], strategy = args[:strategy],
+			    nsamples = samples)
+        end
+
 		push!(event_timing, time_per_event)
-		println("$(basename(event_file)), $time_per_event")
 	end
 	hepmc3_files_df[:, :n_samples] = n_samples
 	hepmc3_files_df[:, :time_per_event] = event_timing
@@ -205,7 +255,7 @@ main() = begin
 
     # Write out the results
     if isdir(args[:results])
-        results_file = joinpath(args[:results], "julia-$(args[:algorithm])-" *
+        results_file = joinpath(args[:results], "$(args[:backend])-$(args[:algorithm])-" *
                                 "$(args[:strategy])-$(args[:distance]).csv")
     else
         results_file = args[:results]
