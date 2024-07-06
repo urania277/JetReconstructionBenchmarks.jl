@@ -1,12 +1,16 @@
 # Julia Fastjet Utilities and Benchmarks
 
-This repository has some utility and example functions for running jet reconstruction with the [`JetReconstruction`](https://github.com/JuliaHEP/JetReconstruction.jl) Julia package.
+This repository has some utility and example functions for running jet
+reconstruction with the
+[`JetReconstruction`](https://github.com/JuliaHEP/JetReconstruction.jl) Julia
+package.
 
 ## Overview
 
 ### `fastjet`
 
-Example C++ application that runs fastjet for comparing with other implementations:
+Example C++ application that runs fastjet for comparing with other
+implementations:
 
 - Timing comparisons
 - Jet reconstruction outputs
@@ -17,9 +21,9 @@ JSON files for comparison tests with Julia.
 
 ### `genevt`
 
-TODO
-
 Pythia8 application(s) for producing input HepMC3 files.
+
+TODO: Proper CMAke setup, but the source files will take you most of the way.
 
 ### `data`
 
@@ -38,6 +42,9 @@ data files for running with fastjet.
 tests with Julia
 - `generate-benchmarks.sh` example file of how to generate a set of benchmark
   files for various parameters
+- `findmin-test.jl` tests the speed of finding minima in vectors, using Julia's
+  builtin `findmin` and an turbo version that uses `LoopVectorization` (as is
+  used in `JetReconstruction.jl`)
 
 ### `results`
 
