@@ -54,9 +54,7 @@ function main()
         end
         backend, algorithm, strategy, R_str = metadata_match.captures
         R = tryparse(Float64, R_str)
-        @info "Got $backend $algorithm $strategy $R"
         for row in eachrow(one_result_df)
-            println(row[:time_per_event])
             push!(results_df, (row[:File], 
                 row[:mean_particles], 
                 row[:n_samples],
