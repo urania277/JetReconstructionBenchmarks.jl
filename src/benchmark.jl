@@ -258,14 +258,17 @@ function main()
     println(hepmc3_files_df)
 
     # Write out the results
-    if isdir(args[:results])
-        results_file = joinpath(args[:results],
-                                "$(args[:backend])-$(args[:algorithm])-" *
-                                "$(args[:strategy])-$(args[:distance]).csv")
-    else
-        results_file = args[:results]
+    if !isnothing(args[:results])
+        if isdir(args[:results])
+            results_file = joinpath(args[:results],
+                                    "$(args[:backend])-$(args[:algorithm])-" *
+                                    "$(args[:strategy])-$(args[:distance]).csv")
+        else
+            results_file = args[:results]
+        end
+        @info "Writing results to $(results_file)"
+        CSV.write(results_file, hepmc3_files_df)
     end
-    CSV.write(results_file, hepmc3_files_df)
 
     nothing
 end
