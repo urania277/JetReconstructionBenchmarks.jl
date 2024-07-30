@@ -34,13 +34,18 @@ using Time = std::chrono::high_resolution_clock;
 using us = std::chrono::microseconds;
 
 fastjet::ClusterSequence run_fastjet_clustering(std::vector<fastjet::PseudoJet> input_particles,
-  fastjet::Strategy strategy, fastjet::JetAlgorithm algorithm, double R) {
+  fastjet::Strategy strategy, fastjet::JetAlgorithm algorithm, double R, double p) {
 
   fastjet::RecombinationScheme recomb_scheme=fastjet::E_scheme;
-  fastjet::JetDefinition jet_def(algorithm, R, recomb_scheme, strategy);
+  fastjet::JetDefinition jet_definition;
+  if (algorithm == fastjet::genkt_algorithm) {
+    jet_definition = fastjet::JetDefinition(algorithm, R, p, recomb_scheme, strategy);
+  } else {
+    jet_definition = fastjet::JetDefinition(algorithm, R, recomb_scheme, strategy);
+  }
 
   // run the jet clustering with the above jet definition
-  fastjet::ClusterSequence clust_seq(input_particles, jet_def);
+  fastjet::ClusterSequence clust_seq(input_particles, jet_definition);
 
   return clust_seq;
 }
@@ -62,7 +67,7 @@ int main(int argc, char* argv[]) {
   int maxevents = -1;
   int trials = 1;
   string mystrategy = "Best";
-  int power = -1;
+  double power = -1.0;
   double R = 0.4;
   string dump_file = "";
 
@@ -71,7 +76,7 @@ int main(int argc, char* argv[]) {
   auto max_events_option = opts.add<Value<int>>("m", "maxevents", "Maximum events in file to process (-1 = all events)", maxevents, &maxevents);
   auto trials_option = opts.add<Value<int>>("n", "trials", "Number of repeated trials", trials, &trials);
   auto strategy_option = opts.add<Value<string>>("s", "strategy", "Valid values are 'Best' (default), 'N2Plain', 'N2Tiled'", mystrategy, &mystrategy);
-  auto power_option = opts.add<Value<int>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_aachen, 1=inclusive kt", power, &power);
+  auto power_option = opts.add<Value<double>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_aachen, 1=inclusive kt; otherwise generalised Kt", power, &power);
   auto radius_option = opts.add<Value<double>>("R", "radius", "Algorithm R parameter", R, &R);
   auto ptmin_option = opts.add<Value<double>>("", "ptmin", "pt cut for inclusive jets");
   auto dijmax_option = opts.add<Value<double>>("", "dijmax", "dijmax value for exclusive jets");
@@ -120,13 +125,17 @@ int main(int argc, char* argv[]) {
   }
 
   auto algorithm = fastjet::antikt_algorithm;
-  if (power == 0) {
+  if (power == -1.0) {
+    algorithm = fastjet::antikt_algorithm;
+  } else if (power == 0.0) {
     algorithm = fastjet::cambridge_aachen_algorithm;
-  } else if (power == 1) {
+  } else if (power == 1.0) {
     algorithm = fastjet::kt_algorithm;
+  } else {
+    algorithm = fastjet::genkt_algorithm;
   }
 
-  std::cout << "Strategy: " << mystrategy << "; Alg: " << power << endl;
+  std::cout << "Strategy: " << mystrategy << "; Power: " << power << endl;
 
   auto dump_fh = stdout;
   if (dump_option->is_set()) {
@@ -143,7 +152,7 @@ int main(int argc, char* argv[]) {
     std::cout << "Trial " << trial << " ";
     auto start_t = std::chrono::steady_clock::now();
     for (size_t ievt = 0; ievt < events.size(); ++ievt) {
-      auto cluster_sequence = run_fastjet_clustering(events[ievt], strategy, algorithm, R);
+      auto cluster_sequence = run_fastjet_clustering(events[ievt], strategy, algorithm, R, power);
 
       vector<fastjet::PseudoJet> final_jets;
       if (ptmin_option->is_set()) {
