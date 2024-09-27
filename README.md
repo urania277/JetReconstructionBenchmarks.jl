@@ -40,8 +40,8 @@ data files for running with fastjet.
   input files (average cluster density)
 - `fastjet2json.jl` convert fastjet outputs to JSON files for event validation
 tests with Julia
-- `generate-benchmarks.sh` example file of how to generate a set of benchmark
-  files for various parameters
+- `generate-benchmarks-{pp,ee}.sh` example files of how to generate a set of
+  benchmark files for various parameters
 - `findmin-test.jl` tests the speed of finding minima in vectors, using Julia's
   builtin `findmin` and an turbo version that uses `LoopVectorization` (as is
   used in `JetReconstruction.jl`)
