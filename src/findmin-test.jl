@@ -43,13 +43,17 @@ md"## Shrinking Array Test"
 md"### Julia `findmin`"
 
 # ╔═╡ 0143579d-3dad-43ff-b504-9af0a50fa660
-@benchmark for j in array_size:-1:1 findmin(@view x[1:j]) end
+@benchmark for j in array_size:-1:1
+    findmin(@view x[1:j])
+end
 
 # ╔═╡ a83cd7a2-7045-4ba2-b8f2-4a001abf7789
 md"### Fast `findmin` (vectorised)"
 
 # ╔═╡ 3e96d66a-f0ac-4c27-8247-962957ed9d23
-@benchmark for j in array_size:-1:1 fast_findmin(x, j) end
+@benchmark for j in array_size:-1:1
+    fast_findmin(x, j)
+end
 
 # ╔═╡ 13874a32-7acd-4b70-86cb-97106b0f8ba5
 md"## Fixed Array Size Test"

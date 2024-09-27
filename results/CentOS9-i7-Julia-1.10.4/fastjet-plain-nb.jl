@@ -105,7 +105,8 @@ f
   ╠═╡ =#
 
 # ╔═╡ 37a707d5-4a43-4383-8fec-d5ea2ae4a39c
-fjsel = (results_df[!, :backend] .== "FastJet") .& (results_df[!, :strategy] .== "N2Plain") .& (results_df[!, :algorithm] .== "CA")
+fjsel = (results_df[!, :backend] .== "FastJet") .&
+        (results_df[!, :strategy] .== "N2Plain") .& (results_df[!, :algorithm] .== "CA")
 
 # ╔═╡ 553bff2c-f18e-4afc-b7bd-5943ca95b76a
 fj_selected_data = sort!(results_df[fjsel, [:mean_particles, :time_per_event, :R]], :R)
@@ -118,14 +119,17 @@ fj_summary = combine(fj_plain_gdf, :R => mean)
 
 # ╔═╡ ecada299-0821-4169-bff7-e1531603ddb1
 begin
-	fj_f = Figure()
-	fj_ax = Axis(fj_f[1, 1], title="FastJet N2Plain", xlabel="Cluster density", ylabel="μs per event", limits=(nothing, nothing, 0, 5000))
-	for (sn, slc) in enumerate(fj_plain_gdf)
-		r = fj_summary[sn, :R]
-		lines!(fj_ax, slc[!, :mean_particles], slc[!, :time_per_event], color = ColorSchemes.glasbey_category10_n256[sn])
-		scatter!(fj_ax, slc[!, :mean_particles], slc[!, :time_per_event], label="R=$r", color = ColorSchemes.glasbey_category10_n256[sn])
-	end
-	axislegend(position = :lt)
+    fj_f = Figure()
+    fj_ax = Axis(fj_f[1, 1], title = "FastJet N2Plain", xlabel = "Cluster density",
+                 ylabel = "μs per event", limits = (nothing, nothing, 0, 5000))
+    for (sn, slc) in enumerate(fj_plain_gdf)
+        r = fj_summary[sn, :R]
+        lines!(fj_ax, slc[!, :mean_particles], slc[!, :time_per_event],
+               color = ColorSchemes.glasbey_category10_n256[sn])
+        scatter!(fj_ax, slc[!, :mean_particles], slc[!, :time_per_event], label = "R=$r",
+                 color = ColorSchemes.glasbey_category10_n256[sn])
+    end
+    axislegend(position = :lt)
 end
 
 # ╔═╡ 267b3168-6de9-4116-b0bb-6fc580b8bf21
@@ -221,7 +225,6 @@ typeof(results_groups)
   ╠═╡ =#
 
 # ╔═╡ e53e313f-3f99-4a95-b41e-71be81cc0a20
-
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
