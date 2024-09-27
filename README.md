@@ -23,7 +23,7 @@ JSON files for comparison tests with Julia.
 
 Pythia8 application(s) for producing input HepMC3 files.
 
-TODO: Proper CMAke setup, but the source files will take you most of the way.
+TODO: Proper CMake setup, but the source files will take you most of the way.
 
 ### `data`
 

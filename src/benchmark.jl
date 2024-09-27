@@ -38,26 +38,28 @@ function hepmc3gunzip(input_file::AbstractString)
         close(in)
         close(out)
     end
-    return unpacked_file
+    unpacked_file
 end
 
 function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
                                     ptmin::Float64 = 5.0,
                                     distance::Float64 = 0.4,
+                                    p::Union{Real, Nothing} = nothing,
                                     algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
                                     strategy::RecoStrategy.Strategy,
                                     nsamples::Integer = 1)
     @info "Will process $(size(events)[1]) events"
 
-    # Map algorithm to power
-    power = JetReconstruction.algorithm2power[algorithm]
+    # Set consistent algorithm and power
+    (p, algorithm) = JetReconstruction.get_algorithm_power_consistency(p = p,
+                                                                       algorithm = algorithm)
 
     # Warmup code if we are doing a multi-sample timing run
     if nsamples > 1
         @info "Doing initial warm-up run"
         for event in events
-            _ = inclusive_jets(jet_reconstruct(event, R = distance, p = power,
-                                               strategy = strategy), ptmin)
+            _ = inclusive_jets(jet_reconstruct(event, R = distance, p = p,
+                                               strategy = strategy); ptmin = ptmin)
         end
     end
 
@@ -78,8 +80,8 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
         t_start = time_ns()
         Threads.@threads for event in events
             my_t = Threads.threadid()
-            inclusive_jets(jet_reconstruct(event, R = distance, p = power,
-                                           strategy = strategy), ptmin)
+            inclusive_jets(jet_reconstruct(event, R = distance, p = p,
+                                           strategy = strategy), ptmin = ptmin)
         end
         t_stop = time_ns()
         dt_μs = convert(Float64, t_stop - t_start) * 1.e-3
@@ -114,28 +116,31 @@ end
 function fastjet_jet_process_avg_time(input_file::AbstractString;
                                       ptmin::Float64 = 5.0,
                                       distance::Float64 = 0.4,
+                                      p::Union{Real, Nothing} = nothing,
                                       algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
                                       strategy::RecoStrategy.Strategy,
                                       nsamples::Integer = 1)
 
     # FastJet reader cannot handle gzipped files
     if endswith(input_file, ".gz")
-        event_file = hepmc3gunzip(input_file)
+        input_file = hepmc3gunzip(input_file)
     end
 
-    # Map algorithm to power
-    power = JetReconstruction.algorithm2power[algorithm]
+    # Set consistent algorithm and power
+    (p, algorithm) = JetReconstruction.get_algorithm_power_consistency(p = p,
+                                                                       algorithm = algorithm)
 
     # @warn "FastJet timing not implemented yet"
     fj_bin = joinpath(@__DIR__, "..", "fastjet", "build", "fastjet-finder")
     fj_args = String[]
-    push!(fj_args, "-p", string(power))
+    push!(fj_args, "-p", string(p))
     push!(fj_args, "-s", string(strategy))
     push!(fj_args, "-R", string(distance))
     push!(fj_args, "--ptmin", string(ptmin))
 
     push!(fj_args, "-n", string(nsamples))
-    fj_output = read(`$fj_bin $fj_args $event_file`, String)
+    @info "Fastjet command: $fj_bin $fj_args $input_file"
+    fj_output = read(`$fj_bin $fj_args $input_file`, String)
     tryparse(Float64, match(r"Lowest time per event ([\d\.]+) us", fj_output)[1])
 end
 
@@ -156,6 +161,10 @@ function parse_command_line(args)
         help = """Algorithm to use for jet reconstruction: $(join(JetReconstruction.AllJetRecoAlgorithms, ", "))"""
         arg_type = JetAlgorithm.Algorithm
         default = JetAlgorithm.AntiKt
+
+        "--power", "-p"
+        help = """Power value for jet reconstruction"""
+        arg_type = Float64
 
         "--strategy", "-S"
         help = """Strategy for the algorithm, valid values: $(join(JetReconstruction.AllJetRecoStrategies, ", "))"""
@@ -241,12 +250,14 @@ function main()
             time_per_event = julia_jet_process_avg_time(events, ptmin = args[:ptmin],
                                                         distance = args[:distance],
                                                         algorithm = args[:algorithm],
+                                                        p = args[:power],
                                                         strategy = args[:strategy],
                                                         nsamples = samples)
         elseif args[:backend] == Backends.FastJet
             time_per_event = fastjet_jet_process_avg_time(event_file, ptmin = args[:ptmin],
                                                           distance = args[:distance],
                                                           algorithm = args[:algorithm],
+                                                          p = args[:power],
                                                           strategy = args[:strategy],
                                                           nsamples = samples)
         end
