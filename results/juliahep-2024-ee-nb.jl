@@ -53,6 +53,9 @@ aos_input_file = joinpath(@__DIR__, aos_dir, "all-results.csv")
 # ╔═╡ 61561970-e3ae-4288-8b4c-5e619c2492fc
 plot_output_dir = "JuliaHEP-2024"
 
+# ╔═╡ 6807345d-3a98-4274-afec-8c7c345376d1
+plot_prefix = "OSX-M2Pro-"
+
 # ╔═╡ 8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
 md"### Read inputs"
 
@@ -112,7 +115,7 @@ let
                  color = Makie.wong_colors()[sn], label = "$(slc[1, :backend])")
     end
     axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "Julia-FastJet-Durham.png"), durham_plot)
+	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-Durham.png"), durham_plot)
 	durham_plot
 end
 
@@ -153,7 +156,7 @@ let
                  color = c, label = l)
     end
     axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "Julia-AoS-FastJet-Durham.png"), durham_plot)
+	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-AoS-FastJet-Durham.png"), durham_plot)
 	durham_plot
 end
 
@@ -206,7 +209,7 @@ let
                  color = c, label = "$(k.backend) R=$(k.R)")
     end
     axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "Julia-FastJet-EEKt-AllR.png"), eekt_antikt_plot)
+	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-EEKt-AllR.png"), eekt_antikt_plot)
 	eekt_antikt_plot
 end
 
@@ -242,7 +245,7 @@ let
                  color = c, label = l)
     end
     axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "Julia-FastJet-EEKt-R1.png"), eekt_antikt_r1_plot)
+	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-EEKt-R1.png"), eekt_antikt_r1_plot)
 	eekt_antikt_r1_plot
 end
 
@@ -1762,6 +1765,7 @@ version = "3.6.0+0"
 # ╠═2a52599d-82b5-4632-b3ab-45e811611f8c
 # ╠═989b1f31-5a3b-4d9d-9660-936c343ca389
 # ╠═61561970-e3ae-4288-8b4c-5e619c2492fc
+# ╠═6807345d-3a98-4274-afec-8c7c345376d1
 # ╟─8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
 # ╠═afba83db-a2e4-46ef-98de-4e1e6cde0d30
 # ╠═7fb848e7-5014-4b3e-8548-6ba8d2b30510
