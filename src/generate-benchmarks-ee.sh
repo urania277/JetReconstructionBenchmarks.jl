@@ -18,7 +18,7 @@ inputs=data/events-summary-ee.csv
 for backend in Julia FastJet; do
     # Durham has no R or p parameter (or implicitly R=4, p=1)
     algorithm=Durham
-    cmd="julia --project src/benchmark.jl --backend $backend -A $algorithm -m 16 --results $output $inputs"
+    cmd="julia --project src/benchmark.jl --backend $backend -A $algorithm -R 4.0 -p 1.0 -m 16 --results $output $inputs"
     echo "Benchmark: $cmd"
     $cmd
     for radius in 0.2 0.4 1.0 1.5 2.0 4.0; do

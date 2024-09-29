@@ -20,7 +20,14 @@ for backend in Julia FastJet; do
     for strategy in N2Plain N2Tiled; do
         for radius in 0.2 0.4 1.0 1.5 2.0 3.0; do
             for algorithm in AntiKt CA Kt; do
-                cmd="julia --project src/benchmark.jl --backend $backend -R $radius -A $algorithm -S $strategy -m 16 --results $output $inputs"
+                if [ $algorithm == "AntiKt" ]; then
+                    p=-1.0
+                elif [ $algorithm == "CA" ]; then
+                    p=0.0
+                elif [ $algorithm == "Kt" ]; then
+                    p=1.0
+                fi
+                cmd="julia --project src/benchmark.jl --backend $backend -p $p -R $radius -A $algorithm -S $strategy -m 16 --results $output $inputs"
                 echo "Benchmark: $cmd"
                 $cmd
             done

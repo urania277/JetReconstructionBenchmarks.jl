@@ -272,8 +272,8 @@ function main()
     if !isnothing(args[:results])
         if isdir(args[:results])
             results_file = joinpath(args[:results],
-                                    "$(args[:backend])-$(args[:algorithm])-" *
-                                    "$(args[:strategy])-$(args[:distance]).csv")
+                                    "$(args[:backend])_$(args[:algorithm])_" *
+                                    "$(args[:strategy])_R$(args[:distance])_P$(args[:power]).csv")
         else
             results_file = args[:results]
         end

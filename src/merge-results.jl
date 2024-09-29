@@ -42,8 +42,14 @@ function main()
                            backend = String[],
                            algorithm = String[],
                            strategy = String[],
-                           R = Float64[])
-    metadata_re = r"^(\w+)-(\w+)-(\w+)-([\d\.]+)\.csv"
+                           R = Float64[],
+                           p = Float64[])
+    # This is the match string for the new filename metadata
+    # Different metadata pieces are separeted by underscores
+    # The order is:
+    # BACKEND_ALGORITHM_STRATEGY_RN.N_PN.N.csv
+    # where N.N is a floating point number
+    metadata_re = r"^(\w+)_(\w+)_(\w+)_R([\d\.]+)_P([-\d\.]+)\.csv"
     for (input_file_path, one_result_df) in results_dictionary
         filename = basename(input_file_path)
         metadata_match = match(metadata_re, filename)
@@ -51,8 +57,9 @@ function main()
             @warn "Failed to match expected metadata for filename $filename"
             continue
         end
-        backend, algorithm, strategy, R_str = metadata_match.captures
+        backend, algorithm, strategy, R_str, p_str = metadata_match.captures
         R = tryparse(Float64, R_str)
+        p = parse(Float64, p_str)
         for row in eachrow(one_result_df)
             push!(results_df,
                   (row[:File],
@@ -62,7 +69,8 @@ function main()
                    backend,
                    algorithm,
                    strategy,
-                   R))
+                   R,
+                   p))
         end
     end
     @info "Writing merged outputs to $(args[:output])"
