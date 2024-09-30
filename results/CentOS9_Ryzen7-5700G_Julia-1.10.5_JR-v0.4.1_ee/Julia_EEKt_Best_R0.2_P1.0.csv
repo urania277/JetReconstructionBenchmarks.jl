@@ -1,3 +1,3 @@
 File,mean_particles,File_path,n_samples,time_per_event
-events-ee-Z.hepmc3.gz,43.05,data/events-ee-Z.hepmc3.gz,16,16.61871
-events-ee-H.hepmc3.gz,64.97,data/events-ee-H.hepmc3.gz,16,31.686120000000003
+events-ee-Z.hepmc3.gz,43.05,data/events-ee-Z.hepmc3.gz,16,16.6663
+events-ee-H.hepmc3.gz,64.97,data/events-ee-H.hepmc3.gz,16,31.977960000000003
