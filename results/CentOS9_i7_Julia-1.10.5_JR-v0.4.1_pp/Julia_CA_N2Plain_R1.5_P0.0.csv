@@ -1,0 +1,14 @@
+File,mean_particles,File_path,n_samples,time_per_event
+events-ee-Z.hepmc3.gz,43.05,data/events-ee-Z.hepmc3.gz,16,42.83241
+events-ee-H.hepmc3.gz,64.97,data/events-ee-H.hepmc3.gz,16,73.65139
+events-pp-0.5TeV-5GeV.hepmc3.gz,112.62,data/events-pp-0.5TeV-5GeV.hepmc3.gz,16,150.61235
+events-pp-1TeV-5GeV.hepmc3.gz,160.36,data/events-pp-1TeV-5GeV.hepmc3.gz,16,260.04347
+events-pp-2TeV-5Gev.hepmc3.gz,188.21,data/events-pp-2TeV-5Gev.hepmc3.gz,16,357.04136
+events-pp-1TeV.hepmc3.gz,226.98,data/events-pp-1TeV.hepmc3.gz,16,472.66431000000006
+events-pp-2TeV.hepmc3.gz,226.98,data/events-pp-2TeV.hepmc3.gz,16,467.1829
+events-pp-5TeV-10GeV.hepmc3.gz,284.15,data/events-pp-5TeV-10GeV.hepmc3.gz,16,711.66174
+events-pp-8TeV-20GeV.hepmc3.gz,354.18,data/events-pp-8TeV-20GeV.hepmc3.gz,16,1069.91278
+events-pp-13TeV-20GeV.hepmc3.gz,431.18,data/events-pp-13TeV-20GeV.hepmc3.gz,16,1518.65456
+events-pp-20TeV-20GeV.hepmc3.gz,524.59,data/events-pp-20TeV-20GeV.hepmc3.gz,16,2119.96993
+events-pp-20TeV-50GeV.hepmc3.gz,553.64,data/events-pp-20TeV-50GeV.hepmc3.gz,16,2409.61358
+events-pp-30TeV-50GeV.hepmc3.gz,632.29,data/events-pp-30TeV-50GeV.hepmc3.gz,16,2961.75554
