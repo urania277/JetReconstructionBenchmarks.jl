@@ -37,24 +37,15 @@ md"## Utilities"
 # ╔═╡ 1bcbb978-07fa-4e64-9298-75ab23569157
 md"## Define parameters"
 
-# ╔═╡ e97e3a5a-9ef2-40c3-8bcc-d6ef442cda7c
-dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.1-ee"
-
-# ╔═╡ 88c42247-0945-40f5-97c2-a9f3a82ae076
-# aos_dir is to also plot the results from the original implementation
-aos_dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.0-ee"
-
-# ╔═╡ 2a52599d-82b5-4632-b3ab-45e811611f8c
-input_file = joinpath(@__DIR__, dir, "all-results.csv")
-
-# ╔═╡ 989b1f31-5a3b-4d9d-9660-936c343ca389
-aos_input_file = joinpath(@__DIR__, aos_dir, "all-results.csv")
-
-# ╔═╡ 61561970-e3ae-4288-8b4c-5e619c2492fc
-plot_output_dir = "JuliaHEP-2024"
-
-# ╔═╡ 6807345d-3a98-4274-afec-8c7c345376d1
-plot_prefix = "OSX-M2Pro-"
+# ╔═╡ 9dcb12aa-274d-464f-aeb0-52b441a07457
+begin
+	dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.1-ee"
+	aos_dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.0-ee"
+	input_file = joinpath(@__DIR__, dir, "all-results.csv")
+	aos_input_file = joinpath(@__DIR__, aos_dir, "all-results.csv")
+	plot_output_dir = "JuliaHEP-2024"
+	plot_prefix = "OSX-M2Pro-"
+end
 
 # ╔═╡ 8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
 md"### Read inputs"
@@ -97,7 +88,7 @@ durham_df = all_results_df[select_results_rows(all_results_df,
                                                            ), :];
 
 # ╔═╡ 41ce47d9-e324-4810-856d-893d7ce3bf6b
-sort!(durham_df, [:mean_particles]);
+sort!(durham_df, [:mean_particles, :algorithm]);
 
 # ╔═╡ 556fe065-991f-4ebc-9fee-8e084e8c7961
 durham_backend_df = groupby(durham_df, :backend);
@@ -119,6 +110,12 @@ let
 	durham_plot
 end
 
+# ╔═╡ c5171a52-41b3-4731-aefc-7a6a652b6968
+md"#### Ratio of JetReconstruction.jl to Fastjet"
+
+# ╔═╡ 54f4234f-09cd-48d7-b63d-2ef568bbdf30
+durham_df[durham_df[!, :backend] .== "FastJet", :time_per_event] ./ durham_df[durham_df[!, :backend] .== "Julia", :time_per_event]
+
 # ╔═╡ 8267ce9c-117d-42bf-82a1-d9b22095abde
 md"Add also into the plot the v0.4.0 results, which used more AoS"
 
@@ -129,7 +126,7 @@ durham_aos_df = all_aos_results_df[select_results_rows(all_aos_results_df,
                                                            ), :];
 
 # ╔═╡ ceaa6c20-b0cb-4819-8bf8-7ac79b32629b
-sort!(durham_aos_df, [:mean_particles]);
+sort!(durham_aos_df, [:mean_particles, :algorithm]);
 
 # ╔═╡ 9251e28f-7f62-4a2c-9d7b-894d6574904e
 let
@@ -138,10 +135,6 @@ let
               title = "Durham Algorithm",
               xlabel = "Average Cluster Density", ylabel = "μs per event",
 				limits = (nothing, nothing, 0.0, nothing))
-	lines!(ax, durham_aos_df[!, :mean_particles], durham_aos_df[!, :time_per_event],
-               color = Makie.wong_colors()[3])
-	scatter!(ax, durham_aos_df[!, :mean_particles], durham_aos_df[!, :time_per_event],
-               color = Makie.wong_colors()[3], label = "JetReconstruction.jl v0.4.0")
     for (k, subdf) in pairs(durham_backend_df)
 		if k.backend == "FastJet"
 			c = Makie.wong_colors()[1]
@@ -155,10 +148,17 @@ let
         scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
                  color = c, label = l)
     end
+	lines!(ax, durham_aos_df[!, :mean_particles], durham_aos_df[!, :time_per_event],
+               color = Makie.wong_colors()[3])
+	scatter!(ax, durham_aos_df[!, :mean_particles], durham_aos_df[!, :time_per_event],
+               color = Makie.wong_colors()[3], label = "JetReconstruction.jl v0.4.0")
     axislegend(position = :rb)
 	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-AoS-FastJet-Durham.png"), durham_plot)
 	durham_plot
 end
+
+# ╔═╡ 67c4175e-e7a2-4112-941e-883216ece7e4
+durham_df[durham_df[!, :backend] .== "FastJet", :time_per_event] ./ durham_aos_df[durham_aos_df[!, :backend] .== "Julia", :time_per_event]
 
 # ╔═╡ f3a20a43-a27e-4542-9a55-514a24b2ee96
 md"### Generalised EE Kt"
@@ -248,6 +248,12 @@ let
 	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-EEKt-R1.png"), eekt_antikt_r1_plot)
 	eekt_antikt_r1_plot
 end
+
+# ╔═╡ 4f89d065-e245-4a32-a2fb-7225e62f8702
+md"#### JetReconstruction.jl to Fastjet ratios"
+
+# ╔═╡ bae7075e-1f7e-44b5-937b-d256b9f6d3e3
+eekt_antikt_r1_df[eekt_antikt_r1_df[!, :backend] .== "FastJet", :time_per_event] ./ eekt_antikt_r1_df[eekt_antikt_r1_df[!, :backend] .== "Julia", :time_per_event]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1760,12 +1766,7 @@ version = "3.6.0+0"
 # ╟─bf4c8301-aa08-4529-a8a8-0082e2a86e71
 # ╠═b2a04431-a8fb-4cc3-a772-9bce310d1558
 # ╟─1bcbb978-07fa-4e64-9298-75ab23569157
-# ╠═e97e3a5a-9ef2-40c3-8bcc-d6ef442cda7c
-# ╠═88c42247-0945-40f5-97c2-a9f3a82ae076
-# ╠═2a52599d-82b5-4632-b3ab-45e811611f8c
-# ╠═989b1f31-5a3b-4d9d-9660-936c343ca389
-# ╠═61561970-e3ae-4288-8b4c-5e619c2492fc
-# ╠═6807345d-3a98-4274-afec-8c7c345376d1
+# ╠═9dcb12aa-274d-464f-aeb0-52b441a07457
 # ╟─8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
 # ╠═afba83db-a2e4-46ef-98de-4e1e6cde0d30
 # ╠═7fb848e7-5014-4b3e-8548-6ba8d2b30510
@@ -1775,10 +1776,13 @@ version = "3.6.0+0"
 # ╠═41ce47d9-e324-4810-856d-893d7ce3bf6b
 # ╠═556fe065-991f-4ebc-9fee-8e084e8c7961
 # ╠═5f920b38-5dc6-4a47-a97d-2e3ec68425de
+# ╟─c5171a52-41b3-4731-aefc-7a6a652b6968
+# ╠═54f4234f-09cd-48d7-b63d-2ef568bbdf30
 # ╟─8267ce9c-117d-42bf-82a1-d9b22095abde
 # ╠═98a3c1b5-4a8a-4bcd-afd9-0933a348bb16
 # ╠═ceaa6c20-b0cb-4819-8bf8-7ac79b32629b
 # ╠═9251e28f-7f62-4a2c-9d7b-894d6574904e
+# ╠═67c4175e-e7a2-4112-941e-883216ece7e4
 # ╟─f3a20a43-a27e-4542-9a55-514a24b2ee96
 # ╠═3ea19825-bbcc-49a8-9f73-4ecb528d29df
 # ╠═2b8227e6-4e93-46e5-92dd-b59054cd7f04
@@ -1790,5 +1794,7 @@ version = "3.6.0+0"
 # ╠═b09d225a-657e-49f8-baa3-2ed1ce5c2aab
 # ╠═60b9bfc3-90e1-44b3-ab39-7545e0427b09
 # ╠═7ad2333a-ef87-49df-a310-db88ac5d2f57
+# ╟─4f89d065-e245-4a32-a2fb-7225e62f8702
+# ╠═bae7075e-1f7e-44b5-937b-d256b9f6d3e3
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
