@@ -25,8 +25,11 @@ using ColorSchemes
 # ╔═╡ a5c2659e-ca5a-4b81-bead-6917a3146d86
 using Logging
 
+# ╔═╡ 2ef02841-028b-4d89-811a-7949e7fb70ea
+using Printf
+
 # ╔═╡ 24a8d5b4-c493-4965-aa66-983612d7d514
-md"""# CHEP 2024 Plots: $e^+e^-$
+md"""# CHEP 2024 Plots: $pp$
 
 Plots for Jet Reconstruction talk at CHEP 2024
 """
@@ -39,7 +42,7 @@ md"## Define parameters"
 
 # ╔═╡ 9dcb12aa-274d-464f-aeb0-52b441a07457
 begin
-	dir = "CentOS9-Ryzen7-5700G-Julia-1.11.1-JR-v0.4.3-ee"
+	dir = "CentOS9-Ryzen7-5700G-Julia-1.11.1-JR-v0.4.3-pp"
 	input_file = joinpath(@__DIR__, dir, "all-results.csv")
 	plot_output_dir = "CHEP-2024"
 	plot_prefix = "Alma9-AMD-Ryzen7-"
@@ -77,13 +80,27 @@ function select_results_rows(df::DataFrame, selector::Dict)
     selection
 end
 
+# ╔═╡ 02b8134c-4c82-4982-943e-0c02d56b5670
+describe(all_results_df)
+
+# ╔═╡ 07a519a2-1f39-40cf-9f76-a8e42ff9bd11
+md"### Cleanup
+
+In some benchmarks there was a duplicate input labeled as both `events-pp-1TeV.hepmc3.gz` and `events-pp-2TeV.hepmc3.gz` - so delete one of the entries"
+
+# ╔═╡ ac590145-710c-4beb-936f-701cdf61e0be
+deleteat!(all_results_df, findall(all_results_df.file .== "events-pp-1TeV.hepmc3.gz"));
+
+# ╔═╡ 5742881e-edd0-436a-bcfc-c23aa193fb8f
+md"""### A few helpers..."""
+
 # ╔═╡ f7fc0d90-94f3-456b-9816-3d0a190f4ce7
 md"## Plots"
 
-# ╔═╡ de40d1ee-76e7-4263-9176-215c13057d1f
-md"### Set Theme"
+# ╔═╡ 6078c44e-7ca4-4f69-a50c-eb9c9764243e
+md"### Set theme"
 
-# ╔═╡ 46110d5d-c6e9-4804-944e-785bd2a5c18a
+# ╔═╡ d6ba95a5-8e41-40f9-b3a4-60635b889be6
 begin
 	fontsize_theme = Theme(fontsize = 20)
 #	plot_theme = merge(theme_dark(), theme_latexfonts(), fontsize_theme)
@@ -92,144 +109,145 @@ begin
 end
 
 # ╔═╡ 1f3deba7-be64-49c8-84db-dfb1fe1495dc
-md"### Durham Algorithm"
+md"### AntiKt Algorithm"
 
 # ╔═╡ f27502a6-98f9-42c1-9003-28c041940b57
-durham_df = all_results_df[select_results_rows(all_results_df,
-                                                      Dict("algorithm" => "Durham")
+antikt_df = all_results_df[select_results_rows(all_results_df,
+                                                      Dict("algorithm" => "AntiKt")
                                                            ), :];
 
+# ╔═╡ 4469fcef-344e-421e-a6e2-a9b1e2117443
+R_values=sort(unique(antikt_df[!, :R]))
+
+# ╔═╡ c17811a1-c5ed-441b-95ae-de3ef39b2464
+strat_values = unique(antikt_df[!, :strategy])
+
 # ╔═╡ 41ce47d9-e324-4810-856d-893d7ce3bf6b
-sort!(durham_df, [:mean_particles, :algorithm]);
+sort!(antikt_df, [:backend, :mean_particles, :algorithm, :R, :strategy]);
 
 # ╔═╡ 556fe065-991f-4ebc-9fee-8e084e8c7961
-durham_backend_df = groupby(durham_df, :backend);
+antikt_gdf = groupby(antikt_df, [:backend, :strategy, :R]);
 
 # ╔═╡ 5f920b38-5dc6-4a47-a97d-2e3ec68425de
 let
-    durham_plot = Figure()
-    ax = Axis(durham_plot[1, 1],
-              title = "Durham Algorithm",
+    antikt_r04 = Figure()
+    ax = Axis(antikt_r04[1, 1],
+              title = "AntiKt Algorithm, R=0.4 Tiled Strategy",
               xlabel = "Average Cluster Density", ylabel = "μs per event",
 			  limits = (nothing, nothing, 0.0, nothing))
-    for (k, subdf) in pairs(durham_backend_df)
+    for (k, subdf) in pairs(antikt_gdf)
+		# Crude filter...
+		if k.R != 0.4 || k.strategy != "N2Tiled"
+			continue
+		end
+        lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
+               color = colours[k.backend])
+        scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
+                 color = color = colours[k.backend], label = "$(labels[k.backend]) $(k.strategy)")
+    end
+
+    axislegend(position = :lt)
+	#save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-AntiKt-Tiled-04.png"), antikt_r04)
+	antikt_r04
+end
+
+# ╔═╡ 922438ef-8113-4ef8-8d17-25d68581dcb6
+let
+    fig = Figure()
+    ax = Axis(fig[1, 1],
+              title = "AntiKt Algorithm, R=1.0 Plain Strategy",
+              xlabel = "Average Cluster Density", ylabel = "μs per event",
+			  limits = (nothing, nothing, 0.0, nothing))
+    for (k, subdf) in pairs(antikt_gdf)
+		# Crude filter...
+		if k.R != 1.0 || k.strategy != "N2Plain"
+			continue
+		end
+        lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
+               color = colours[k.backend])
+        scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
+                 color = color = colours[k.backend], label = "$(labels[k.backend]) $(k.strategy)")
+    end
+
+    axislegend(position = :lt)
+	#save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-AntiKt-Plain-10.png"), fig)
+	fig
+end
+
+# ╔═╡ b8e93837-5e23-41dc-a6ed-b9c791ead7b2
+"""Generalised plotter for a strategy and R value"""
+function julia_fastjet_R_plot(df; strategy="N2Plain", R=1.0, algorithm="AntiKt", plot_prefix="Tmp-")
+	fig = Figure()
+    ax = Axis(fig[1, 1],
+              title = "$(algorithm), R=$(R), $(strategy)",
+              xlabel = "Average Cluster Density", ylabel = "μs per event",
+			  limits = (nothing, nothing, 0.0, nothing))
+    for (k, subdf) in pairs(antikt_gdf)
+		# Crude filter...
+		if k.R != R || k.strategy != strategy
+			continue
+		end
         lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
                color = colours[k.backend])
         scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
                  color = color = colours[k.backend], label = "$(labels[k.backend])")
     end
 
-    axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-Durham.png"), durham_plot)
-	durham_plot
+    axislegend(position = :lt)
+	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-$(algorithm)-$(strategy)-$(@sprintf "%02d" R*10).png"), fig)
+	fig
 end
+
+# ╔═╡ ccc542e3-1d56-4b9a-b851-890847cd189f
+md"Now cycle over each R value, plotting for each strategy"
+
+# ╔═╡ c08a0d87-0401-4f2e-92c6-598602c7d822
+for R in R_values
+	julia_fastjet_R_plot(antikt_gdf; strategy="N2Tiled", R=R, algorithm="AntiKt", plot_prefix=plot_prefix)
+	julia_fastjet_R_plot(antikt_gdf; strategy="N2Plain", R=R, algorithm="AntiKt",
+	plot_prefix=plot_prefix)
+end
+
 
 # ╔═╡ c5171a52-41b3-4731-aefc-7a6a652b6968
 md"#### Ratio of JetReconstruction.jl to Fastjet"
 
-# ╔═╡ 54f4234f-09cd-48d7-b63d-2ef568bbdf30
-ratios = durham_df[durham_df[!, :backend] .== "FastJet", :time_per_event] ./ durham_df[durham_df[!, :backend] .== "Julia", :time_per_event]
+# ╔═╡ 209e1430-3384-4e8e-af40-0a3caf577655
+j=all_results_df[select_results_rows(all_results_df, Dict("algorithm" => "AntiKt", "R" => 0.4, "strategy" => "N2Tiled", "backend" => "Julia")), :];
 
-# ╔═╡ 8c365ead-a926-4ea9-9b1e-8d72af550bc3
-durham_julia_to_fj = DataFrame("mean_particles" => durham_df[durham_df[!, :backend] .== "FastJet", :time_per_event], "ratio" => ratios)
+# ╔═╡ c38b2eae-08df-4bce-9a31-c98d90e13c2d
+f=all_results_df[select_results_rows(all_results_df, Dict("algorithm" => "AntiKt", "R" => 0.4, "strategy" => "N2Tiled", "backend" => "FastJet")), :];
 
-# ╔═╡ 6c2363f5-8c0f-4cb6-b70c-3df771cd2b2b
-function ratio_plot(df; title="", plot_prefix=plot_prefix, algorithm="")
+# ╔═╡ 9b35f6cc-80d2-4056-b601-47ae4be7301d
+f[!, :time_per_event] ./ j[!, :time_per_event]
+
+# ╔═╡ 577f8375-691c-4848-a690-7d2906ff874f
+antikt_julia_to_fj = DataFrame("mean_particles" => f[!, :mean_particles], "ratio" => f[!, :time_per_event] ./ j[!, :time_per_event])
+
+# ╔═╡ 59085454-b049-4b53-b050-f2e495fc85dd
+
+
+# ╔═╡ da345cea-b720-4023-b8a7-48f1e0eb3e17
+function ratio_plot(df; title="", plot_prefix=plot_prefix, algorithm="", strategy="", R=0.0)
 	fig = Figure()
     ax = Axis(fig[1, 1],
               title = title,
               xlabel = "Average Cluster Density", ylabel = "Fastjet / Julia",
 			  )
-	#lines!(ax, df[!, :mean_particles], df[!, :ratio], color=colours["Julia"])
+	lines!(ax, df[!, :mean_particles], df[!, :ratio], color=colours["Julia"])
 	scatter!(ax, df[!, :mean_particles], df[!, :ratio], color=colours["Julia"], markersize = 20)
-	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-$(algorithm)-Ratio.png"), fig)
+	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-$(algorithm)-$(strategy)-$(@sprintf "%02d" R*10)-Ratio.png"), fig)
 	fig
 end
 
-# ╔═╡ 2a7585b9-cd07-4553-91bb-abf5cdc0b197
-ratio_plot(durham_julia_to_fj; plot_prefix=plot_prefix, algorithm="Durham", title="Fastjet / Julia Runtime Durham Algorithm")
+# ╔═╡ 0f7f5dc7-4ad7-4cbc-98eb-a69e23291398
+ratio_plot(antikt_julia_to_fj, title="Fastjet / Julia Runtime AntiKt, R=0.4, N2Tiled", algorithm="AntiKt", strategy="N2Tiled", R=0.4)
 
 # ╔═╡ f3a20a43-a27e-4542-9a55-514a24b2ee96
-md"### Generalised EE Kt"
+md"### R scan plots"
 
-# ╔═╡ 3ea19825-bbcc-49a8-9f73-4ecb528d29df
-eekt_df = all_results_df[select_results_rows(all_results_df,
-                                                      Dict("algorithm" => "EEKt")
-                                                           ), :];
+# ╔═╡ e91c41f9-f395-4f53-af07-e055c937db6b
 
-# ╔═╡ 2b8227e6-4e93-46e5-92dd-b59054cd7f04
-eekt_antikt_df = all_results_df[select_results_rows(all_results_df,
-                                                      Dict("algorithm" => "EEKt",
-													  "p" => -1.0)
-                                                           ), :];
-
-# ╔═╡ 0621c278-d859-46e2-8338-34e2312b21c8
-sort!(eekt_antikt_df, [:mean_particles, :backend, :R]);
-
-# ╔═╡ 1c9cb527-ab04-4176-8968-10e0ec213fb9
-eekt_antikt_gdf = groupby(eekt_antikt_df, [:backend, :R]);
-
-# ╔═╡ 71b1a386-7bfe-43c8-8a01-91505812cb85
-combine(eekt_antikt_gdf, :time_per_event => mean, groupindices)
-
-# ╔═╡ fdde4a9c-79d6-4f49-b001-a32ca8cf4ac7
-let
-    eekt_antikt_plot = Figure()
-    ax = Axis(eekt_antikt_plot[1, 1],
-              title = "EEKt Algorithm",
-              xlabel = "Average Cluster Density", ylabel = "μs per event",
-			  limits = (nothing, 80, 0.0, nothing))
-	colour_counter = Dict("FastJet" => 0, "Julia" => 0)
-	for (k, subdf) in pairs(eekt_antikt_gdf)
-		colour_counter[k.backend] += 1
-		if k.backend == "FastJet"
-			c = colorschemes[:davos10][colour_counter[k.backend]]
-		else
-			c = colorschemes[:buda10][colour_counter[k.backend]]
-		end
-        lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-               color = c)
-        scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-                 color = c, label = "$(k.backend) R=$(k.R)")
-    end
-    axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-EEKt-AllR.png"), eekt_antikt_plot)
-	eekt_antikt_plot
-end
-
-# ╔═╡ b09d225a-657e-49f8-baa3-2ed1ce5c2aab
-eekt_antikt_r1_df = all_results_df[select_results_rows(all_results_df,
-                                                      Dict("algorithm" => "EEKt",
-													  "p" => -1.0, "R" => 1.0)
-                                                           ), :];
-
-# ╔═╡ 60b9bfc3-90e1-44b3-ab39-7545e0427b09
-eekt_antikt_r1_gdf = groupby(eekt_antikt_r1_df, [:backend]);
-
-# ╔═╡ 7ad2333a-ef87-49df-a310-db88ac5d2f57
-let
-    eekt_antikt_r1_plot = Figure()
-    ax = Axis(eekt_antikt_r1_plot[1, 1],
-              title = "EEKt Algorithm (p=-1, R=1)",
-              xlabel = "Average Cluster Density", ylabel = "μs per event",
-			  limits = (nothing, nothing, 0.0, nothing))
-	for (k, subdf) in pairs(eekt_antikt_r1_gdf)
-        lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-               color = colours[k.backend])
-        scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-                 color = colours[k.backend], 
-				 label = labels[k.backend])
-    end
-    axislegend(position = :rb)
-	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-EEKt-R1.png"), eekt_antikt_r1_plot)
-	eekt_antikt_r1_plot
-end
-
-# ╔═╡ 4f89d065-e245-4a32-a2fb-7225e62f8702
-md"#### JetReconstruction.jl to Fastjet ratios"
-
-# ╔═╡ bae7075e-1f7e-44b5-937b-d256b9f6d3e3
-eekt_antikt_r1_df[eekt_antikt_r1_df[!, :backend] .== "FastJet", :time_per_event] ./ eekt_antikt_r1_df[eekt_antikt_r1_df[!, :backend] .== "Julia", :time_per_event]
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -240,6 +258,7 @@ ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
+Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
 
 [compat]
@@ -248,6 +267,7 @@ CairoMakie = "~0.12.11"
 ColorSchemes = "~3.26.0"
 DataFrames = "~1.6.1"
 Makie = "~0.21.11"
+Statistics = "~1.11.1"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -256,7 +276,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "38b0dacabe625a06af78f631ea66e92b916c184a"
+project_hash = "20f74ae659fef441a0d28d49098aad1f0d35095f"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1776,7 +1796,7 @@ version = "3.6.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═24a8d5b4-c493-4965-aa66-983612d7d514
+# ╟─24a8d5b4-c493-4965-aa66-983612d7d514
 # ╠═188be64e-3de6-11ef-222f-d7ff0fef6fe6
 # ╠═26572cc6-4e1e-47b3-9f9b-e32390d0798b
 # ╠═54b7f7ef-18c5-45ea-b8e8-acb68e63e27d
@@ -1784,6 +1804,7 @@ version = "3.6.0+0"
 # ╠═dc1a4340-5484-4285-acc0-b290a2cce100
 # ╠═f75e3757-3a6b-490a-b3e1-f3c82bfa3b07
 # ╠═a5c2659e-ca5a-4b81-bead-6917a3146d86
+# ╠═2ef02841-028b-4d89-811a-7949e7fb70ea
 # ╟─bf4c8301-aa08-4529-a8a8-0082e2a86e71
 # ╠═b2a04431-a8fb-4cc3-a772-9bce310d1558
 # ╟─1bcbb978-07fa-4e64-9298-75ab23569157
@@ -1792,30 +1813,33 @@ version = "3.6.0+0"
 # ╠═2c6b9cf2-2518-4582-b0e8-4c2a2efabc59
 # ╟─8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
 # ╠═afba83db-a2e4-46ef-98de-4e1e6cde0d30
+# ╠═02b8134c-4c82-4982-943e-0c02d56b5670
+# ╟─07a519a2-1f39-40cf-9f76-a8e42ff9bd11
+# ╠═ac590145-710c-4beb-936f-701cdf61e0be
+# ╟─5742881e-edd0-436a-bcfc-c23aa193fb8f
+# ╠═4469fcef-344e-421e-a6e2-a9b1e2117443
+# ╠═c17811a1-c5ed-441b-95ae-de3ef39b2464
 # ╟─f7fc0d90-94f3-456b-9816-3d0a190f4ce7
-# ╟─de40d1ee-76e7-4263-9176-215c13057d1f
-# ╠═46110d5d-c6e9-4804-944e-785bd2a5c18a
+# ╟─6078c44e-7ca4-4f69-a50c-eb9c9764243e
+# ╠═d6ba95a5-8e41-40f9-b3a4-60635b889be6
 # ╟─1f3deba7-be64-49c8-84db-dfb1fe1495dc
 # ╠═f27502a6-98f9-42c1-9003-28c041940b57
 # ╠═41ce47d9-e324-4810-856d-893d7ce3bf6b
 # ╠═556fe065-991f-4ebc-9fee-8e084e8c7961
 # ╠═5f920b38-5dc6-4a47-a97d-2e3ec68425de
+# ╠═922438ef-8113-4ef8-8d17-25d68581dcb6
+# ╠═b8e93837-5e23-41dc-a6ed-b9c791ead7b2
+# ╟─ccc542e3-1d56-4b9a-b851-890847cd189f
+# ╠═c08a0d87-0401-4f2e-92c6-598602c7d822
 # ╟─c5171a52-41b3-4731-aefc-7a6a652b6968
-# ╠═54f4234f-09cd-48d7-b63d-2ef568bbdf30
-# ╠═8c365ead-a926-4ea9-9b1e-8d72af550bc3
-# ╠═6c2363f5-8c0f-4cb6-b70c-3df771cd2b2b
-# ╠═2a7585b9-cd07-4553-91bb-abf5cdc0b197
-# ╟─f3a20a43-a27e-4542-9a55-514a24b2ee96
-# ╠═3ea19825-bbcc-49a8-9f73-4ecb528d29df
-# ╠═2b8227e6-4e93-46e5-92dd-b59054cd7f04
-# ╠═0621c278-d859-46e2-8338-34e2312b21c8
-# ╠═1c9cb527-ab04-4176-8968-10e0ec213fb9
-# ╠═71b1a386-7bfe-43c8-8a01-91505812cb85
-# ╠═fdde4a9c-79d6-4f49-b001-a32ca8cf4ac7
-# ╠═b09d225a-657e-49f8-baa3-2ed1ce5c2aab
-# ╠═60b9bfc3-90e1-44b3-ab39-7545e0427b09
-# ╠═7ad2333a-ef87-49df-a310-db88ac5d2f57
-# ╟─4f89d065-e245-4a32-a2fb-7225e62f8702
-# ╠═bae7075e-1f7e-44b5-937b-d256b9f6d3e3
+# ╠═209e1430-3384-4e8e-af40-0a3caf577655
+# ╠═c38b2eae-08df-4bce-9a31-c98d90e13c2d
+# ╠═9b35f6cc-80d2-4056-b601-47ae4be7301d
+# ╠═577f8375-691c-4848-a690-7d2906ff874f
+# ╠═59085454-b049-4b53-b050-f2e495fc85dd
+# ╠═da345cea-b720-4023-b8a7-48f1e0eb3e17
+# ╠═0f7f5dc7-4ad7-4cbc-98eb-a69e23291398
+# ╠═f3a20a43-a27e-4542-9a55-514a24b2ee96
+# ╠═e91c41f9-f395-4f53-af07-e055c937db6b
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
