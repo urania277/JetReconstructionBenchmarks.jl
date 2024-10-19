@@ -14,7 +14,7 @@ int main() {
 
   // Interface for conversion from Pythia8::Event to HepMC
   // event. Specify file where HepMC events will be stored.
-  Pythia8::Pythia8ToHepMC topHepMC("events-ee-H.hepmc3");
+  Pythia8::Pythia8ToHepMC topHepMC("events-ee-120.hepmc3");
 
   // Generator. Process selection. LHC initialization. Histogram.
   Pythia pythia;
@@ -27,17 +27,16 @@ int main() {
   pythia.readString("23:onMode = off");
   pythia.readString("23:onIfAny = 1 2 3 4 5");
 
-  // e+e- beams at Z-pole
+  // e+e- beams
   pythia.readString("Beams:idA =  11");
   pythia.readString("Beams:idB = -11");
-  pythia.readString("Beams:eCM = 250.");
+  
+  // Can set beam energy here, like this:
   // double mZ = pythia.particleData.m0(23);
   // pythia.settings.parm("Beams:eCM", mZ);
+  // Or with a manual valus
+  pythia.readString("Beams:eCM = 120.");
 
-
-  // pythia.readString("Beams:eCM = 13000.");
-  // pythia.readString("HardQCD:all = on");
-  // pythia.readString("PhaseSpace:pTHatMin = 20.");
   pythia.init();
   Hist mult("charged multiplicity", 100, -0.5, 799.5);
 
