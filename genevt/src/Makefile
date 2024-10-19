@@ -7,7 +7,7 @@ CXXFLAGS+=-O2 -std=c++17
 #CXXFLAGS+=-g -Og
 
 PYTHIA_DIR=$(HOME)/.local/pythia
-HEPMC3_DIR=/opt
+HEPMC3_DIR=$(HOME)/.local/HepMC3
 
 all: genevts-pp genevts-ee genevts-AA
 
