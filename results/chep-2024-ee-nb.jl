@@ -131,7 +131,7 @@ md"#### Ratio of JetReconstruction.jl to Fastjet"
 ratios = durham_df[durham_df[!, :backend] .== "FastJet", :time_per_event] ./ durham_df[durham_df[!, :backend] .== "Julia", :time_per_event]
 
 # ╔═╡ 8c365ead-a926-4ea9-9b1e-8d72af550bc3
-durham_julia_to_fj = DataFrame("mean_particles" => durham_df[durham_df[!, :backend] .== "FastJet", :time_per_event], "ratio" => ratios)
+durham_julia_to_fj = DataFrame("mean_particles" => durham_df[durham_df[!, :backend] .== "FastJet", :mean_particles], "ratio" => ratios)
 
 # ╔═╡ 6c2363f5-8c0f-4cb6-b70c-3df771cd2b2b
 function ratio_plot(df; title="", plot_prefix=plot_prefix, algorithm="")
@@ -139,8 +139,9 @@ function ratio_plot(df; title="", plot_prefix=plot_prefix, algorithm="")
     ax = Axis(fig[1, 1],
               title = title,
               xlabel = "Average Cluster Density", ylabel = "Fastjet / Julia",
+			  limits = (nothing, nothing, 1.0, 1.5)
 			  )
-	#lines!(ax, df[!, :mean_particles], df[!, :ratio], color=colours["Julia"])
+	lines!(ax, df[!, :mean_particles], df[!, :ratio], color=colours["Julia"])
 	scatter!(ax, df[!, :mean_particles], df[!, :ratio], color=colours["Julia"], markersize = 20)
 	save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-$(algorithm)-Ratio.png"), fig)
 	fig
@@ -1776,7 +1777,7 @@ version = "3.6.0+0"
 """
 
 # ╔═╡ Cell order:
-# ╠═24a8d5b4-c493-4965-aa66-983612d7d514
+# ╟─24a8d5b4-c493-4965-aa66-983612d7d514
 # ╠═188be64e-3de6-11ef-222f-d7ff0fef6fe6
 # ╠═26572cc6-4e1e-47b3-9f9b-e32390d0798b
 # ╠═54b7f7ef-18c5-45ea-b8e8-acb68e63e27d
