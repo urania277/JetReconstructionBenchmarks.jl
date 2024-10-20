@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.45
+# v0.19.46
 
 using Markdown
 using InteractiveUtils
@@ -34,25 +34,6 @@ Plots for Jet Reconstruction talk at JuliaHEP 2024
 # ╔═╡ bf4c8301-aa08-4529-a8a8-0082e2a86e71
 md"## Utilities"
 
-# ╔═╡ 1bcbb978-07fa-4e64-9298-75ab23569157
-md"## Define parameters"
-
-# ╔═╡ 9dcb12aa-274d-464f-aeb0-52b441a07457
-begin
-	dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.1-ee"
-	aos_dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.0-ee"
-	input_file = joinpath(@__DIR__, dir, "all-results.csv")
-	aos_input_file = joinpath(@__DIR__, aos_dir, "all-results.csv")
-	plot_output_dir = "JuliaHEP-2024"
-	plot_prefix = "OSX-M2Pro-"
-end
-
-# ╔═╡ 8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
-md"### Read inputs"
-
-# ╔═╡ afba83db-a2e4-46ef-98de-4e1e6cde0d30
-all_results_df = CSV.read(input_file, DataFrame);
-
 # ╔═╡ b2a04431-a8fb-4cc3-a772-9bce310d1558
 """
     select_results_rows(df::DataFrame, selector::Dict)
@@ -72,6 +53,25 @@ function select_results_rows(df::DataFrame, selector::Dict)
     end
     selection
 end
+
+# ╔═╡ 1bcbb978-07fa-4e64-9298-75ab23569157
+md"## Define parameters"
+
+# ╔═╡ 9dcb12aa-274d-464f-aeb0-52b441a07457
+begin
+	dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.1-ee"
+	aos_dir = "OSX-14.5_M2Pro_Julia-1.10.5_JR-v0.4.0-ee"
+	input_file = joinpath(@__DIR__, dir, "all-results.csv")
+	aos_input_file = joinpath(@__DIR__, aos_dir, "all-results.csv")
+	plot_output_dir = "JuliaHEP-2024"
+	plot_prefix = "OSX-M2Pro-"
+end
+
+# ╔═╡ 8f764e7a-ee1f-4f74-b8d6-8d332cbc95ae
+md"### Read inputs"
+
+# ╔═╡ afba83db-a2e4-46ef-98de-4e1e6cde0d30
+all_results_df = CSV.read(input_file, DataFrame);
 
 # ╔═╡ 7fb848e7-5014-4b3e-8548-6ba8d2b30510
 all_aos_results_df = CSV.read(aos_input_file, DataFrame);
