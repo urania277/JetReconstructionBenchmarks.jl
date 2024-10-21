@@ -28,6 +28,9 @@ using Logging
 # ╔═╡ 2ef02841-028b-4d89-811a-7949e7fb70ea
 using Printf
 
+# ╔═╡ 8d8ff740-d907-4c53-846d-3e63d499b434
+using LaTeXStrings
+
 # ╔═╡ 24a8d5b4-c493-4965-aa66-983612d7d514
 md"""# CHEP 2024 Plots: $pp$
 
@@ -42,7 +45,7 @@ md"## Define parameters"
 
 # ╔═╡ 9dcb12aa-274d-464f-aeb0-52b441a07457
 begin
-	dir = "CentOS9-Ryzen7-5700G-Julia-1.11.1-JR-v0.4.3-pp"
+	dir = "Alma9-Ryzen7-5700G-Julia-1.11.1-JR-v0.4.3-pp"
 	input_file = joinpath(@__DIR__, dir, "all-results.csv")
 	plot_output_dir = "CHEP-2024"
 	plot_prefix = "Alma9-AMD-Ryzen7-"
@@ -128,52 +131,6 @@ sort!(antikt_df, [:backend, :mean_particles, :algorithm, :R, :strategy]);
 # ╔═╡ 556fe065-991f-4ebc-9fee-8e084e8c7961
 antikt_gdf = groupby(antikt_df, [:backend, :strategy, :R]);
 
-# ╔═╡ 5f920b38-5dc6-4a47-a97d-2e3ec68425de
-let
-    antikt_r04 = Figure()
-    ax = Axis(antikt_r04[1, 1],
-              title = "AntiKt Algorithm, R=0.4 Tiled Strategy",
-              xlabel = "Average Cluster Density", ylabel = "μs per event",
-			  limits = (nothing, nothing, 0.0, nothing))
-    for (k, subdf) in pairs(antikt_gdf)
-		# Crude filter...
-		if k.R != 0.4 || k.strategy != "N2Tiled"
-			continue
-		end
-        lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-               color = colours[k.backend])
-        scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-                 color = color = colours[k.backend], label = "$(labels[k.backend]) $(k.strategy)")
-    end
-
-    axislegend(position = :lt)
-	#save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-AntiKt-Tiled-04.png"), antikt_r04)
-	antikt_r04
-end
-
-# ╔═╡ 922438ef-8113-4ef8-8d17-25d68581dcb6
-let
-    fig = Figure()
-    ax = Axis(fig[1, 1],
-              title = "AntiKt Algorithm, R=1.0 Plain Strategy",
-              xlabel = "Average Cluster Density", ylabel = "μs per event",
-			  limits = (nothing, nothing, 0.0, nothing))
-    for (k, subdf) in pairs(antikt_gdf)
-		# Crude filter...
-		if k.R != 1.0 || k.strategy != "N2Plain"
-			continue
-		end
-        lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-               color = colours[k.backend])
-        scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-                 color = color = colours[k.backend], label = "$(labels[k.backend]) $(k.strategy)")
-    end
-
-    axislegend(position = :lt)
-	#save(joinpath(plot_output_dir, "$(plot_prefix)Julia-FastJet-AntiKt-Plain-10.png"), fig)
-	fig
-end
-
 # ╔═╡ b8e93837-5e23-41dc-a6ed-b9c791ead7b2
 """Generalised plotter for a strategy and R value"""
 function julia_fastjet_R_plot(df; strategy="N2Plain", R=1.0, algorithm="AntiKt", plot_prefix="Tmp-")
@@ -190,7 +147,7 @@ function julia_fastjet_R_plot(df; strategy="N2Plain", R=1.0, algorithm="AntiKt",
         lines!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
                color = colours[k.backend])
         scatter!(ax, subdf[!, :mean_particles], subdf[!, :time_per_event],
-                 color = color = colours[k.backend], label = "$(labels[k.backend])")
+                 color = colours[k.backend], label = "$(labels[k.backend])")
     end
 
     axislegend(position = :lt)
@@ -244,10 +201,71 @@ end
 ratio_plot(antikt_julia_to_fj, title="Fastjet / Julia Runtime AntiKt, R=0.4, N2Tiled", algorithm="AntiKt", strategy="N2Tiled", R=0.4)
 
 # ╔═╡ f3a20a43-a27e-4542-9a55-514a24b2ee96
-md"### R scan plots"
+md"### R scan plots
 
-# ╔═╡ e91c41f9-f395-4f53-af07-e055c937db6b
+See if we can plot a bunch of R values all at the same time, using grouped dataframes
+"
 
+# ╔═╡ e4a94b76-d870-4335-815f-d53dabea256f
+function r_scan_plot(df; title = "", filename = nothing)
+	# Make a grouped dataframe by R value
+	r_gdf = groupby(df, [:R], sort=true)
+	n_plots = length(r_gdf)
+	# Setup figure and axes...
+	sm_fontsize_theme = Theme(fontsize = 16)
+	with_theme(sm_fontsize_theme) do
+		fig = Figure(size=(1200,600))
+		legend_marks = Dict()
+		for (i_plot, (r_k, r_sdf)) in enumerate(pairs(r_gdf))
+			plot_x = (i_plot-1) ÷ 3 + 1
+			plot_y = mod1(i_plot, 3)
+			# println("$i_plot: ($plot_x, $plot_y) => $(r_k.R)")
+			ax = Axis(fig[plot_x, plot_y],
+	              title = L"$R=%$(r_k.R)$",
+	              xlabel = "Average Cluster Density", ylabel = "μs per event",
+				  )
+			sub_gdf = groupby(r_sdf, [:backend])
+			for (i_sub, (k, sdf)) in enumerate(pairs(sub_gdf))
+				lines!(ax, sdf[!, :mean_particles], sdf[!, :time_per_event], color = colours[k.backend])
+	       	 	s = scatter!(ax, sdf[!, :mean_particles], sdf[!, :time_per_event], color = colours[k.backend], label = "$(labels[k.backend])")
+				if i_plot == 1
+					legend_marks[k.backend] = s
+				end
+			end
+		end
+		Legend(fig[:, 4], [legend_marks["Julia"], legend_marks["FastJet"]], ["JetReconstruction.jl", "Fastjet"])
+		supertitle = Label(fig[0, :], title, fontsize = 24)
+		if !isnothing(filename)
+			save(joinpath(plot_output_dir, filename), fig)
+		end
+		fig
+	end
+end
+		
+
+# ╔═╡ 3f4c459e-f831-4071-824f-aa7f180dcfd5
+begin
+	antikt_tiled_df = all_results_df[select_results_rows(all_results_df,
+                                                      Dict("algorithm" => "AntiKt",
+													  "strategy" => "N2Tiled")
+                                                           ), :];
+	sort!(antikt_df, [:R, :backend, :mean_particles]);
+end
+
+# ╔═╡ 626afa0f-f4f0-47bb-b855-10e1ef7c267d
+r_scan_plot(antikt_tiled_df; title = L"AntiKt N2Tiled $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-AntiKt-N2Tiled-MultiR.png")
+
+# ╔═╡ e89b0bb1-10fa-4641-9876-5ed717fde6e0
+begin
+	antikt_plain_df = all_results_df[select_results_rows(all_results_df,
+                                                      Dict("algorithm" => "AntiKt",
+													  "strategy" => "N2Plain")
+                                                           ), :];
+	sort!(antikt_plain_df, [:R, :backend, :mean_particles]);
+end
+
+# ╔═╡ 5620bf35-6473-479b-b197-c44814e1a33e
+r_scan_plot(antikt_plain_df; title = L"AntiKt N2Plain $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-AntiKt-N2Plain-MultiR.png")
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -256,6 +274,7 @@ CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
+LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
 Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
@@ -266,6 +285,7 @@ CSV = "~0.10.14"
 CairoMakie = "~0.12.11"
 ColorSchemes = "~3.26.0"
 DataFrames = "~1.6.1"
+LaTeXStrings = "~1.4.0"
 Makie = "~0.21.11"
 Statistics = "~1.11.1"
 """
@@ -276,7 +296,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "20f74ae659fef441a0d28d49098aad1f0d35095f"
+project_hash = "59efd3d1556e16ccbb9866da167dde6ccf0e72a3"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1805,6 +1825,7 @@ version = "3.6.0+0"
 # ╠═f75e3757-3a6b-490a-b3e1-f3c82bfa3b07
 # ╠═a5c2659e-ca5a-4b81-bead-6917a3146d86
 # ╠═2ef02841-028b-4d89-811a-7949e7fb70ea
+# ╠═8d8ff740-d907-4c53-846d-3e63d499b434
 # ╟─bf4c8301-aa08-4529-a8a8-0082e2a86e71
 # ╠═b2a04431-a8fb-4cc3-a772-9bce310d1558
 # ╟─1bcbb978-07fa-4e64-9298-75ab23569157
@@ -1826,8 +1847,6 @@ version = "3.6.0+0"
 # ╠═f27502a6-98f9-42c1-9003-28c041940b57
 # ╠═41ce47d9-e324-4810-856d-893d7ce3bf6b
 # ╠═556fe065-991f-4ebc-9fee-8e084e8c7961
-# ╠═5f920b38-5dc6-4a47-a97d-2e3ec68425de
-# ╠═922438ef-8113-4ef8-8d17-25d68581dcb6
 # ╠═b8e93837-5e23-41dc-a6ed-b9c791ead7b2
 # ╟─ccc542e3-1d56-4b9a-b851-890847cd189f
 # ╠═c08a0d87-0401-4f2e-92c6-598602c7d822
@@ -1839,7 +1858,11 @@ version = "3.6.0+0"
 # ╠═59085454-b049-4b53-b050-f2e495fc85dd
 # ╠═da345cea-b720-4023-b8a7-48f1e0eb3e17
 # ╠═0f7f5dc7-4ad7-4cbc-98eb-a69e23291398
-# ╠═f3a20a43-a27e-4542-9a55-514a24b2ee96
-# ╠═e91c41f9-f395-4f53-af07-e055c937db6b
+# ╟─f3a20a43-a27e-4542-9a55-514a24b2ee96
+# ╠═e4a94b76-d870-4335-815f-d53dabea256f
+# ╠═3f4c459e-f831-4071-824f-aa7f180dcfd5
+# ╠═626afa0f-f4f0-47bb-b855-10e1ef7c267d
+# ╠═e89b0bb1-10fa-4641-9876-5ed717fde6e0
+# ╠═5620bf35-6473-479b-b197-c44814e1a33e
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
