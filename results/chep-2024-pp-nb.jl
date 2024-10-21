@@ -97,6 +97,9 @@ deleteat!(all_results_df, findall(all_results_df.file .== "events-pp-1TeV.hepmc3
 # ╔═╡ 5742881e-edd0-436a-bcfc-c23aa193fb8f
 md"""### A few helpers..."""
 
+# ╔═╡ 8e07bd13-fbde-4334-927d-1a183bb69183
+alg_values = unique(all_results_df[!, :algorithm])
+
 # ╔═╡ f7fc0d90-94f3-456b-9816-3d0a190f4ce7
 md"## Plots"
 
@@ -203,7 +206,7 @@ ratio_plot(antikt_julia_to_fj, title="Fastjet / Julia Runtime AntiKt, R=0.4, N2T
 # ╔═╡ f3a20a43-a27e-4542-9a55-514a24b2ee96
 md"### R scan plots
 
-See if we can plot a bunch of R values all at the same time, using grouped dataframes
+Plot a bunch of R values all at the same time, using grouped dataframes
 "
 
 # ╔═╡ e4a94b76-d870-4335-815f-d53dabea256f
@@ -224,7 +227,7 @@ function r_scan_plot(df; title = "", filename = nothing)
 	              title = L"$R=%$(r_k.R)$",
 	              xlabel = "Average Cluster Density", ylabel = "μs per event",
 				  )
-			sub_gdf = groupby(r_sdf, [:backend])
+			sub_gdf = groupby(r_sdf, [:backend], sort=true)
 			for (i_sub, (k, sdf)) in enumerate(pairs(sub_gdf))
 				lines!(ax, sdf[!, :mean_particles], sdf[!, :time_per_event], color = colours[k.backend])
 	       	 	s = scatter!(ax, sdf[!, :mean_particles], sdf[!, :time_per_event], color = colours[k.backend], label = "$(labels[k.backend])")
@@ -266,6 +269,21 @@ end
 
 # ╔═╡ 5620bf35-6473-479b-b197-c44814e1a33e
 r_scan_plot(antikt_plain_df; title = L"AntiKt N2Plain $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-AntiKt-N2Plain-MultiR.png")
+
+# ╔═╡ febd8e31-c0c6-4714-b43d-99ac7a7bf8c7
+md"Now just loop over all the backends and strategies to get all the plots"
+
+# ╔═╡ c6975858-e8b5-4780-b6ad-58e729e91021
+for alg in alg_values
+	for strat in strat_values
+		alg_strat_df = all_results_df[select_results_rows(all_results_df,
+                                                      Dict("algorithm" => alg,
+													  "strategy" => strat)
+                                                           ), :]
+		sort!(alg_strat_df, [:R, :backend, :mean_particles])
+		r_scan_plot(antikt_plain_df; title = L"%$(alg) %$(strat) $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-$(alg)-$(strat)-MultiR.png")
+	end
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1840,6 +1858,7 @@ version = "3.6.0+0"
 # ╟─5742881e-edd0-436a-bcfc-c23aa193fb8f
 # ╠═4469fcef-344e-421e-a6e2-a9b1e2117443
 # ╠═c17811a1-c5ed-441b-95ae-de3ef39b2464
+# ╠═8e07bd13-fbde-4334-927d-1a183bb69183
 # ╟─f7fc0d90-94f3-456b-9816-3d0a190f4ce7
 # ╟─6078c44e-7ca4-4f69-a50c-eb9c9764243e
 # ╠═d6ba95a5-8e41-40f9-b3a4-60635b889be6
@@ -1864,5 +1883,7 @@ version = "3.6.0+0"
 # ╠═626afa0f-f4f0-47bb-b855-10e1ef7c267d
 # ╠═e89b0bb1-10fa-4641-9876-5ed717fde6e0
 # ╠═5620bf35-6473-479b-b197-c44814e1a33e
+# ╟─febd8e31-c0c6-4714-b43d-99ac7a7bf8c7
+# ╠═c6975858-e8b5-4780-b6ad-58e729e91021
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
