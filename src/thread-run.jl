@@ -31,14 +31,14 @@ function ArgParse.parse_item(opt::DataType, x::AbstractString)
     s
 end
 
-function julia_jet_process_threads(events::Vector{Vector{PseudoJet}};
+function julia_jet_process_threads(events::Vector{Vector{T}};
                                     ptmin::Float64 = 5.0,
                                     distance::Float64 = 0.4,
                                     p::Union{Real, Nothing} = nothing,
                                     algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
                                     strategy::RecoStrategy.Strategy,
                                     nsamples::Integer = 1,
-                                    repeats::Int = 1)
+                                    repeats::Int = 1) where T <: JetReconstruction.FourMomentum
     @info "Will process $(size(events)[1]) events"
 
     # Set consistent algorithm and power
