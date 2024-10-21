@@ -47,12 +47,15 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
                                     p::Union{Real, Nothing} = nothing,
                                     algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
                                     strategy::RecoStrategy.Strategy,
-                                    nsamples::Integer = 1)
+                                    nsamples::Integer = 1,
+                                    repeats::Int = 1)
     @info "Will process $(size(events)[1]) events"
 
     # Set consistent algorithm and power
     (p, algorithm) = JetReconstruction.get_algorithm_power_consistency(p = p,
                                                                        algorithm = algorithm)
+
+    n_events = length(events)
 
     # Warmup code if we are doing a multi-sample timing run
     if nsamples > 1
@@ -78,9 +81,10 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
 
     for irun in 1:nsamples
         t_start = time_ns()
-        Threads.@threads for event in events
+        Threads.@threads for event_counter ∈ 1:n_events * repeats
+            event_idx = mod1(event_counter, n_events)
             my_t = Threads.threadid()
-            inclusive_jets(jet_reconstruct(event, R = distance, p = p,
+            inclusive_jets(jet_reconstruct(events[event_idx], R = distance, p = p,
                                            strategy = strategy), ptmin = ptmin)
         end
         t_stop = time_ns()
@@ -100,9 +104,9 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
     else
         sigma = 0.0
     end
-    mean /= length(events)
-    sigma /= length(events)
-    lowest_time /= length(events)
+    mean /= n_events * repeats
+    sigma /= n_events * repeats
+    lowest_time /= n_events * repeats
     # Why also record the lowest time? 
     # 
     # The argument is that on a "busy" machine, the run time of an application is
@@ -180,6 +184,11 @@ function parse_command_line(args)
         help = "Override for sample number for specific event files"
         nargs = '+'
 
+        "--repeats"
+        help = "Run over whole event sample this number of times"
+        arg_type = Int
+        default = 1
+
         "--backend"
         help = """Backend to use for the jet reconstruction: $(join(AllBackends, ", "))"""
         arg_type = Backends.Backend
@@ -246,13 +255,19 @@ function main()
         push!(n_samples, samples)
 
         if args[:backend] == Backends.Julia
-            events::Vector{Vector{PseudoJet}} = read_final_state_particles(event_file)
+            # Try to read events into the correct type!
+            if JetReconstruction.is_ee(args[:algorithm])
+                JetType = EEjet
+            else
+                JetType = PseudoJet
+            end
+            events::Vector{Vector{JetType}} = read_final_state_particles(event_file; T = JetType)
             time_per_event = julia_jet_process_avg_time(events, ptmin = args[:ptmin],
                                                         distance = args[:distance],
                                                         algorithm = args[:algorithm],
                                                         p = args[:power],
                                                         strategy = args[:strategy],
-                                                        nsamples = samples)
+                                                        nsamples = samples, repeats = args[:repeats])
         elseif args[:backend] == Backends.FastJet
             time_per_event = fastjet_jet_process_avg_time(event_file, ptmin = args[:ptmin],
                                                           distance = args[:distance],
