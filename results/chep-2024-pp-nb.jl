@@ -236,7 +236,7 @@ function r_scan_plot(df; title = "", filename = nothing)
 				end
 			end
 		end
-		Legend(fig[:, 4], [legend_marks["Julia"], legend_marks["FastJet"]], ["JetReconstruction.jl", "Fastjet"])
+		Legend(fig[:, 4], [legend_marks["FastJet"], legend_marks["Julia"]], ["Fastjet", "JetReconstruction.jl"])
 		supertitle = Label(fig[0, :], title, fontsize = 24)
 		if !isnothing(filename)
 			save(joinpath(plot_output_dir, filename), fig)
@@ -253,10 +253,10 @@ begin
 													  "strategy" => "N2Tiled")
                                                            ), :];
 	sort!(antikt_df, [:R, :backend, :mean_particles]);
-end
+end;
 
 # ╔═╡ 626afa0f-f4f0-47bb-b855-10e1ef7c267d
-r_scan_plot(antikt_tiled_df; title = L"AntiKt N2Tiled $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-AntiKt-N2Tiled-MultiR.png")
+r_scan_plot(antikt_tiled_df; title = L"AntiKt N2Tiled $pp$ 13TeV")
 
 # ╔═╡ e89b0bb1-10fa-4641-9876-5ed717fde6e0
 begin
@@ -265,10 +265,10 @@ begin
 													  "strategy" => "N2Plain")
                                                            ), :];
 	sort!(antikt_plain_df, [:R, :backend, :mean_particles]);
-end
+end;
 
 # ╔═╡ 5620bf35-6473-479b-b197-c44814e1a33e
-r_scan_plot(antikt_plain_df; title = L"AntiKt N2Plain $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-AntiKt-N2Plain-MultiR.png")
+r_scan_plot(antikt_plain_df; title = L"AntiKt N2Plain $pp$ 13TeV")
 
 # ╔═╡ febd8e31-c0c6-4714-b43d-99ac7a7bf8c7
 md"Now just loop over all the backends and strategies to get all the plots"
