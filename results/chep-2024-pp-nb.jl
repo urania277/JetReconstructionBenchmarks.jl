@@ -182,7 +182,7 @@ f=all_results_df[select_results_rows(all_results_df, Dict("algorithm" => "AntiKt
 f[!, :time_per_event] ./ j[!, :time_per_event]
 
 # ╔═╡ 577f8375-691c-4848-a690-7d2906ff874f
-antikt_julia_to_fj = DataFrame("mean_particles" => f[!, :mean_particles], "ratio" => f[!, :time_per_event] ./ j[!, :time_per_event])
+antikt_julia_to_fj = DataFrame("mean_particles" => f[!, :mean_particles], "ratio" => f[!, :time_per_event] ./ j[!, :time_per_event]);
 
 # ╔═╡ 59085454-b049-4b53-b050-f2e495fc85dd
 
@@ -256,19 +256,8 @@ begin
 end;
 
 # ╔═╡ 626afa0f-f4f0-47bb-b855-10e1ef7c267d
+# This is just a 1-shot plot to preview (don't save)
 r_scan_plot(antikt_tiled_df; title = L"AntiKt N2Tiled $pp$ 13TeV")
-
-# ╔═╡ e89b0bb1-10fa-4641-9876-5ed717fde6e0
-begin
-	antikt_plain_df = all_results_df[select_results_rows(all_results_df,
-                                                      Dict("algorithm" => "AntiKt",
-													  "strategy" => "N2Plain")
-                                                           ), :];
-	sort!(antikt_plain_df, [:R, :backend, :mean_particles]);
-end;
-
-# ╔═╡ 5620bf35-6473-479b-b197-c44814e1a33e
-r_scan_plot(antikt_plain_df; title = L"AntiKt N2Plain $pp$ 13TeV")
 
 # ╔═╡ febd8e31-c0c6-4714-b43d-99ac7a7bf8c7
 md"Now just loop over all the backends and strategies to get all the plots"
@@ -281,7 +270,7 @@ for alg in alg_values
 													  "strategy" => strat)
                                                            ), :]
 		sort!(alg_strat_df, [:R, :backend, :mean_particles])
-		r_scan_plot(antikt_plain_df; title = L"%$(alg) %$(strat) $pp$ 13TeV", filename = "$(plot_prefix)Julia-Fastjet-$(alg)-$(strat)-MultiR.png")
+		r_scan_plot(alg_strat_df; title = L"%$(alg) %$(strat) $pp$ events", filename = "$(plot_prefix)Julia-Fastjet-$(alg)-$(strat)-MultiR.png")
 	end
 end
 
@@ -1881,8 +1870,6 @@ version = "3.6.0+0"
 # ╠═e4a94b76-d870-4335-815f-d53dabea256f
 # ╠═3f4c459e-f831-4071-824f-aa7f180dcfd5
 # ╠═626afa0f-f4f0-47bb-b855-10e1ef7c267d
-# ╠═e89b0bb1-10fa-4641-9876-5ed717fde6e0
-# ╠═5620bf35-6473-479b-b197-c44814e1a33e
 # ╟─febd8e31-c0c6-4714-b43d-99ac7a7bf8c7
 # ╠═c6975858-e8b5-4780-b6ad-58e729e91021
 # ╟─00000000-0000-0000-0000-000000000001

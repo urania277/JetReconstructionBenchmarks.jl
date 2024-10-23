@@ -39,7 +39,7 @@ md"## Define parameters"
 
 # ╔═╡ 9dcb12aa-274d-464f-aeb0-52b441a07457
 begin
-	dir = "CentOS9-Ryzen7-5700G-Julia-1.11.1-JR-v0.4.3-ee"
+	dir = "Alma9-Ryzen7-5700G-Julia-1.11.1-JR-v0.4.3-ee"
 	input_file = joinpath(@__DIR__, dir, "all-results.csv")
 	plot_output_dir = "CHEP-2024"
 	plot_prefix = "Alma9-AMD-Ryzen7-"
@@ -231,6 +231,62 @@ md"#### JetReconstruction.jl to Fastjet ratios"
 
 # ╔═╡ bae7075e-1f7e-44b5-937b-d256b9f6d3e3
 eekt_antikt_r1_df[eekt_antikt_r1_df[!, :backend] .== "FastJet", :time_per_event] ./ eekt_antikt_r1_df[eekt_antikt_r1_df[!, :backend] .== "Julia", :time_per_event]
+
+# ╔═╡ fce13cc1-c07b-42e4-8a9d-7be0cc2cd2c4
+md"## R scan plots
+
+For eekt_df, which has a R variation"
+
+# ╔═╡ 94e4f2f8-d1db-4c68-8676-58e93f1f684c
+function r_scan_plot(df; title = "", filename = nothing)
+	# Make a grouped dataframe by R value
+	r_gdf = groupby(df, [:R], sort=true)
+	n_plots = length(r_gdf)
+	# Setup figure and axes...
+	sm_fontsize_theme = Theme(fontsize = 16)
+	with_theme(sm_fontsize_theme) do
+		fig = Figure(size=(1200,600))
+		legend_marks = Dict()
+		for (i_plot, (r_k, r_sdf)) in enumerate(pairs(r_gdf))
+			plot_x = (i_plot-1) ÷ 3 + 1
+			plot_y = mod1(i_plot, 3)
+			# println("$i_plot: ($plot_x, $plot_y) => $(r_k.R)")
+			ax = Axis(fig[plot_x, plot_y],
+	              title = L"$R=%$(r_k.R)$",
+	              xlabel = "Average Cluster Density", ylabel = "μs per event",
+				  limits = (nothing, nothing, 0.0, nothing)
+				  )
+			sub_gdf = groupby(r_sdf, [:backend], sort=true)
+			for (i_sub, (k, sdf)) in enumerate(pairs(sub_gdf))
+				lines!(ax, sdf[!, :mean_particles], sdf[!, :time_per_event], color = colours[k.backend])
+	       	 	s = scatter!(ax, sdf[!, :mean_particles], sdf[!, :time_per_event], color = colours[k.backend], label = "$(labels[k.backend])")
+				if i_plot == 1
+					legend_marks[k.backend] = s
+				end
+			end
+		end
+		Legend(fig[:, 4], [legend_marks["FastJet"], legend_marks["Julia"]], ["Fastjet", "JetReconstruction.jl"])
+		supertitle = Label(fig[0, :], title, fontsize = 24)
+		if !isnothing(filename)
+			save(joinpath(plot_output_dir, filename), fig)
+		end
+		fig
+	end
+end
+
+# ╔═╡ dfe078c3-d446-4baa-9b54-97d7df966c5c
+r_scan_plot(eekt_antikt_df; title = "EEKt, p=-1")
+
+# ╔═╡ e7cd9cae-4c4b-4c41-9d1f-5ff21fc30d55
+p_values=sort(unique(eekt_df[!, :p]))
+
+# ╔═╡ 6a888776-025a-4e11-9858-75e1308ce8d9
+for p in p_values
+	eekt_p_df = all_results_df[select_results_rows(all_results_df,
+												  Dict("p" => p)), :]
+	sort!(eekt_p_df, [:R, :backend, :mean_particles])
+	r_scan_plot(eekt_p_df; title = L"Generalised $e^+e^-$ $k_T$, $p=%$(p)$", filename = "$(plot_prefix)Julia-Fastjet-EEKt-p=$p-MultiR.png")
+end
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -1818,5 +1874,10 @@ version = "3.6.0+0"
 # ╠═7ad2333a-ef87-49df-a310-db88ac5d2f57
 # ╟─4f89d065-e245-4a32-a2fb-7225e62f8702
 # ╠═bae7075e-1f7e-44b5-937b-d256b9f6d3e3
+# ╟─fce13cc1-c07b-42e4-8a9d-7be0cc2cd2c4
+# ╠═94e4f2f8-d1db-4c68-8676-58e93f1f684c
+# ╠═dfe078c3-d446-4baa-9b54-97d7df966c5c
+# ╠═e7cd9cae-4c4b-4c41-9d1f-5ff21fc30d55
+# ╠═6a888776-025a-4e11-9858-75e1308ce8d9
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
