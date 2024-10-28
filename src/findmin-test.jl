@@ -7,6 +7,9 @@ using InteractiveUtils
 # ╔═╡ 7b374f71-3e15-40a6-b2a4-c52604df6b11
 using BenchmarkTools
 
+# ╔═╡ 061c9416-9df3-4627-beb7-51d5316ca3f1
+using Chairmarks
+
 # ╔═╡ d1c1bf06-1ce8-4b22-bffd-6d60790d1a82
 using LoopVectorization
 
@@ -46,7 +49,7 @@ md"## Shrinking Array Test"
 md"### Julia `findmin`"
 
 # ╔═╡ 0143579d-3dad-43ff-b504-9af0a50fa660
-@benchmark for j in array_size:-1:1
+@b for j in array_size:-1:1
     findmin(@view x[1:j])
 end
 
@@ -54,7 +57,7 @@ end
 md"### Fast `findmin` (vectorised)"
 
 # ╔═╡ 3e96d66a-f0ac-4c27-8247-962957ed9d23
-@benchmark for j in array_size:-1:1
+@b for j in array_size:-1:1
     fast_findmin(x, j)
 end
 
@@ -65,13 +68,39 @@ md"## Fixed Array Size Test"
 md"### Julia `findmin`"
 
 # ╔═╡ 55255948-5e85-441e-adc4-f4f46f343215
-@benchmark findmin(x)
+@be findmin(x)
 
 # ╔═╡ d6fa4369-deb8-44fa-8dcc-03711a1c3118
-md"### Fast `findmin` (vectorised)"
+md"### Fast `findmin`"
 
 # ╔═╡ 02cdaaf1-966f-4d63-bdbb-75a437b46e30
-@benchmark fast_findmin(x, array_size)
+@be fast_findmin(x, array_size)
+
+# ╔═╡ 3635389e-1ee1-4e39-9836-66cc098ecc44
+function naive_findmin(w)
+    x = @fastmath foldl(min, w)
+    i = findfirst(==(x), w)::Int
+    x, i
+end
+
+# ╔═╡ 708cf089-9051-45de-84de-92b0cb2556c8
+@be naive_findmin(x)
+
+# ╔═╡ 7a53ee87-d302-47ef-a5b6-f6650fefeb10
+function basic_findmin(dij, n)
+   best = 1
+   @inbounds dij_min = dij[1]
+   @inbounds @simd for here in 2:n
+	   dij_here = dij[here]
+	   newmin = dij_here < dij_min
+	   best = ifelse(newmin, here, best)
+	   dij_min = ifelse(newmin, dij_here, dij_min)
+   end
+   dij_min, best
+end
+
+# ╔═╡ 7567da79-9657-42c3-860a-7b8026e70ab7
+@be basic_findmin(x, array_size)
 
 # ╔═╡ 496dd7f5-2669-4d5e-8f75-cefb33931ba6
 @code_lowered fast_findmin(x, array_size)
@@ -83,10 +112,12 @@ md"### Fast `findmin` (vectorised)"
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
 BenchmarkTools = "6e4b80f9-dd63-53aa-95a3-0cdb28fa8baf"
+Chairmarks = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"
 LoopVectorization = "bdcacae8-1622-11e9-2a5c-532679323890"
 
 [compat]
 BenchmarkTools = "~1.5.0"
+Chairmarks = "~1.2.2"
 LoopVectorization = "~0.12.171"
 """
 
@@ -94,9 +125,9 @@ LoopVectorization = "~0.12.171"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.0"
+julia_version = "1.11.1"
 manifest_format = "2.0"
-project_hash = "18a7f92db388b0d1cbbe1d2c0b752b074898a53b"
+project_hash = "d8d6cba016d47c6446b96c0a081324d53213a819"
 
 [[deps.Adapt]]
 deps = ["LinearAlgebra", "Requires"]
@@ -165,6 +196,16 @@ deps = ["CpuId", "IfElse", "PrecompileTools", "Static"]
 git-tree-sha1 = "5a97e67919535d6841172016c9530fd69494e5ec"
 uuid = "2a0fbf3d-bb9c-48f3-b0a9-814d99fd7ab9"
 version = "0.2.6"
+
+[[deps.Chairmarks]]
+deps = ["Printf"]
+git-tree-sha1 = "9bf9d4b0d4a1acc212251eebbdf76f2ad70aae67"
+uuid = "0ca39b1e-fe0b-4e98-acfc-b1656634c4de"
+version = "1.2.2"
+weakdeps = ["Statistics"]
+
+    [deps.Chairmarks.extensions]
+    StatisticsChairmarksExt = ["Statistics"]
 
 [[deps.CloseOpenIntervals]]
 deps = ["Static", "StaticArrayInterface"]
@@ -444,6 +485,7 @@ version = "5.11.0+0"
 # ╟─a960351a-3bb1-11ef-2feb-2363fb988b65
 # ╠═9898de08-488d-4947-aff8-c99272efe3b3
 # ╠═7b374f71-3e15-40a6-b2a4-c52604df6b11
+# ╠═061c9416-9df3-4627-beb7-51d5316ca3f1
 # ╠═d1c1bf06-1ce8-4b22-bffd-6d60790d1a82
 # ╠═13ae413a-4726-4406-a634-aabd6b24a9ad
 # ╠═18eb6dde-ef55-4e0a-9dac-aeb980dd4dba
@@ -458,6 +500,10 @@ version = "5.11.0+0"
 # ╠═55255948-5e85-441e-adc4-f4f46f343215
 # ╟─d6fa4369-deb8-44fa-8dcc-03711a1c3118
 # ╠═02cdaaf1-966f-4d63-bdbb-75a437b46e30
+# ╠═3635389e-1ee1-4e39-9836-66cc098ecc44
+# ╠═708cf089-9051-45de-84de-92b0cb2556c8
+# ╠═7a53ee87-d302-47ef-a5b6-f6650fefeb10
+# ╠═7567da79-9657-42c3-860a-7b8026e70ab7
 # ╠═496dd7f5-2669-4d5e-8f75-cefb33931ba6
 # ╠═435ad5f2-5b50-4bf4-adb1-d3253889291c
 # ╟─00000000-0000-0000-0000-000000000001
