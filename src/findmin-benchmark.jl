@@ -31,10 +31,8 @@ function basic_findmin(dij::DenseVector{T}, n) where T
     @inbounds @simd for here in 2:n
         dij_here = dij[here]
         newmin = dij_here < dij_min
-        best = newmin ? here : best
-        dij_min = newmin ? dij_here : dij_min
-        # best = ifelse(newmin, here, best)
-        # dij_min = ifelse(newmin, dij_here, dij_min)
+        best = ifelse(newmin, here, best)
+        dij_min = ifelse(newmin, dij_here, dij_min)
     end
     dij_min, best
 end
