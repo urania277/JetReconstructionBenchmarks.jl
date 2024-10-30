@@ -42,6 +42,13 @@ function julia_findmin(dij::DenseVector{T}, n) where T
 end
 
 function naive_findmin(dij::DenseVector{T}, n) where T
+    u = view(dij, 1:n)
+    x = @fastmath foldl(min, u)
+    i = findfirst(==(x), u)::Int
+    x, i
+end
+
+function naive_findmin(dij::DenseVector{T}, n) where T
     x = @fastmath foldl(min, @view dij[1:n])
     i = findfirst(==(x), dij)::Int
     x, i
@@ -92,12 +99,15 @@ function run_descent(v::DenseVector{Float64}, f::T; perturb = 0) where T
     # compiler from optimizing everything away!
     sum = 0.0
     for n in length(v):-1:2
-        val, _ = f(v, n)
+        val, index = f(v, n)
         sum += val
-        # If one wants to perturb the array do it like this, which
-        # is a proxy for changing values as the algorithm progresses.
+        # After we found the minimum, it should not be the minimum in the next
+        # iteration
+        v[index] += 1.0
+        # If one wants to further perturb the array, do it like this, which is a
+        # proxy for changing values as the algorithm progresses.
         for _ in 1:min(perturb,n)
-            v[rand(1:n)] = abs(rand())
+            v[rand(1:n)] = rand()
         end
     end
     sum
