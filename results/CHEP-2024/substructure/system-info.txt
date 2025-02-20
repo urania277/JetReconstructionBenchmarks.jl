@@ -1,0 +1,3 @@
+Chipset: Apple Silicon M1
+Ram: 16GB
+OS: macOS 14.5

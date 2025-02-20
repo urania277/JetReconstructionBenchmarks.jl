@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.20.3
 
 using Markdown
 using InteractiveUtils
@@ -12,6 +12,9 @@ using CSV
 
 # ╔═╡ 54b7f7ef-18c5-45ea-b8e8-acb68e63e27d
 using Statistics
+
+# ╔═╡ 0faf429b-af64-4029-8d67-a8f846570d73
+using StatsBase
 
 # ╔═╡ 451f22b7-c929-4c60-ab6c-0b3b174edbb6
 using CairoMakie
@@ -128,6 +131,9 @@ R_values=sort(unique(antikt_df[!, :R]))
 # ╔═╡ c17811a1-c5ed-441b-95ae-de3ef39b2464
 strat_values = unique(antikt_df[!, :strategy])
 
+# ╔═╡ f35b2676-6af5-45e3-b9a0-fd844f03eecb
+density_values = sort(unique(antikt_df[!, :mean_particles]))
+
 # ╔═╡ 41ce47d9-e324-4810-856d-893d7ce3bf6b
 sort!(antikt_df, [:backend, :mean_particles, :algorithm, :R, :strategy]);
 
@@ -183,9 +189,6 @@ f[!, :time_per_event] ./ j[!, :time_per_event]
 
 # ╔═╡ 577f8375-691c-4848-a690-7d2906ff874f
 antikt_julia_to_fj = DataFrame("mean_particles" => f[!, :mean_particles], "ratio" => f[!, :time_per_event] ./ j[!, :time_per_event]);
-
-# ╔═╡ 59085454-b049-4b53-b050-f2e495fc85dd
-
 
 # ╔═╡ da345cea-b720-4023-b8a7-48f1e0eb3e17
 function ratio_plot(df; title="", plot_prefix=plot_prefix, algorithm="", strategy="", R=0.0)
@@ -274,6 +277,69 @@ for alg in alg_values
 	end
 end
 
+# ╔═╡ a1792f51-670b-4f89-a06d-48e4611a9ead
+md"""## Runtime ratios
+
+Calculate an average ratio between the Fastjet runtime and Julia. This is F/J, so measures the *speed up* for Julia compared to Fastjet.
+"""
+
+# ╔═╡ 54bbd546-dd7a-452a-a9f3-6d152530cc18
+julia_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => "AntiKt", "strategy" => "N2Tiled", "backend" => "Julia")), :], [:R, :backend, :mean_particles]);
+
+# ╔═╡ 9d8ab3c3-64e5-4283-ae46-f023e50583ac
+fastjet_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => "AntiKt", "strategy" => "N2Tiled", "backend" => "FastJet")), :], [:R, :backend, :mean_particles]);
+
+# ╔═╡ 0d299679-6179-4268-9f48-19306176aaa7
+mean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+
+# ╔═╡ b4d3c912-852f-45af-b859-007cd5ca2cee
+md"Now run over all the algorithms and strategies to build the table"
+
+# ╔═╡ f640239c-3fde-4cef-8a3a-dd07c73cee0d
+# Averages over all events for different pp algorithms
+let
+	for alg in alg_values
+		for strat in strat_values
+			julia_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => alg, "strategy" => strat, "backend" => "Julia")), :], [:R, :backend, :mean_particles]);
+			fastjet_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => alg, "strategy" => strat, "backend" => "FastJet")), :], [:R, :backend, :mean_particles]);
+			ratio_mean = mean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+			ratio_geomean = geomean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+			println("Alg: $alg, Strat: $strat, Ratio: $ratio_mean, Geomean: $ratio_geomean")
+		end
+	end
+end
+
+# ╔═╡ d0355260-97c1-4567-99a3-103ecb6dc331
+# Averages over R>1.0 for different pp algorithms
+# as Fastjet is pathological for R<1.0
+let
+	for alg in alg_values
+		for strat in strat_values
+			julia_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => alg, "strategy" => strat, "backend" => "Julia", "R" => [1.0, 1.5, 2.0, 3.0])), :], [:R, :backend, :mean_particles]);
+			fastjet_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => alg, "strategy" => strat, "backend" => "FastJet", "R" => [1.0, 1.5, 2.0, 3.0])), :], [:R, :backend, :mean_particles]);
+			ratio_mean = mean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+			ratio_geomean = geomean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+			println("Alg: $alg, Strat: $strat, Ratio: $ratio_mean, Geomean: $ratio_geomean")
+		end
+	end
+end
+
+# ╔═╡ 67cb0e6c-2732-4956-a516-9587ba22c5e8
+# Averages ratios, split by R
+let
+	for alg in alg_values
+		for strat in strat_values
+			for R in R_values
+				julia_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => alg, "strategy" => strat, "backend" => "Julia", "R" => R)), :], [:R, :backend, :mean_particles]);
+				fastjet_results=sort(all_results_df[select_results_rows(all_results_df, Dict("algorithm" => alg, "strategy" => strat, "backend" => "FastJet", "R" => R)), :], [:R, :backend, :mean_particles]);
+				ratio_mean = mean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+				ratio_geomean = geomean(fastjet_results[!, :time_per_event] ./ julia_results[!, :time_per_event])
+				println("Alg: $alg, Strat: $strat, R: $R, Ratio: $ratio_mean, Geomean: $ratio_geomean")
+			end
+		end
+	end
+end
+
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
 [deps]
@@ -286,6 +352,7 @@ Logging = "56ddb016-857b-54e1-b83d-db4d58db5568"
 Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 Printf = "de0858da-6303-5e67-8744-51eddeeeb8d7"
 Statistics = "10745b16-79ce-11e8-11f9-7d13ad32a3b2"
+StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 
 [compat]
 CSV = "~0.10.14"
@@ -295,15 +362,16 @@ DataFrames = "~1.6.1"
 LaTeXStrings = "~1.4.0"
 Makie = "~0.21.11"
 Statistics = "~1.11.1"
+StatsBase = "~0.34.4"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.1"
+julia_version = "1.11.3"
 manifest_format = "2.0"
-project_hash = "59efd3d1556e16ccbb9866da167dde6ccf0e72a3"
+project_hash = "cd736de210080a89c5b0aa7ba4d46ee4f8525f32"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1530,10 +1598,10 @@ uuid = "82ae8749-77ed-4fe6-ae5f-f523153014b0"
 version = "1.7.0"
 
 [[deps.StatsBase]]
-deps = ["DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
-git-tree-sha1 = "5cf7606d6cef84b543b483848d4ae08ad9832b21"
+deps = ["AliasTables", "DataAPI", "DataStructures", "LinearAlgebra", "LogExpFunctions", "Missings", "Printf", "Random", "SortingAlgorithms", "SparseArrays", "Statistics", "StatsAPI"]
+git-tree-sha1 = "29321314c920c26684834965ec2ce0dacc9cf8e5"
 uuid = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
-version = "0.34.3"
+version = "0.34.4"
 
 [[deps.StatsFuns]]
 deps = ["HypergeometricFunctions", "IrrationalConstants", "LogExpFunctions", "Reexport", "Rmath", "SpecialFunctions"]
@@ -1827,6 +1895,7 @@ version = "3.6.0+0"
 # ╠═188be64e-3de6-11ef-222f-d7ff0fef6fe6
 # ╠═26572cc6-4e1e-47b3-9f9b-e32390d0798b
 # ╠═54b7f7ef-18c5-45ea-b8e8-acb68e63e27d
+# ╠═0faf429b-af64-4029-8d67-a8f846570d73
 # ╠═451f22b7-c929-4c60-ab6c-0b3b174edbb6
 # ╠═dc1a4340-5484-4285-acc0-b290a2cce100
 # ╠═f75e3757-3a6b-490a-b3e1-f3c82bfa3b07
@@ -1848,6 +1917,7 @@ version = "3.6.0+0"
 # ╠═4469fcef-344e-421e-a6e2-a9b1e2117443
 # ╠═c17811a1-c5ed-441b-95ae-de3ef39b2464
 # ╠═8e07bd13-fbde-4334-927d-1a183bb69183
+# ╠═f35b2676-6af5-45e3-b9a0-fd844f03eecb
 # ╟─f7fc0d90-94f3-456b-9816-3d0a190f4ce7
 # ╟─6078c44e-7ca4-4f69-a50c-eb9c9764243e
 # ╠═d6ba95a5-8e41-40f9-b3a4-60635b889be6
@@ -1863,7 +1933,6 @@ version = "3.6.0+0"
 # ╠═c38b2eae-08df-4bce-9a31-c98d90e13c2d
 # ╠═9b35f6cc-80d2-4056-b601-47ae4be7301d
 # ╠═577f8375-691c-4848-a690-7d2906ff874f
-# ╠═59085454-b049-4b53-b050-f2e495fc85dd
 # ╠═da345cea-b720-4023-b8a7-48f1e0eb3e17
 # ╠═0f7f5dc7-4ad7-4cbc-98eb-a69e23291398
 # ╟─f3a20a43-a27e-4542-9a55-514a24b2ee96
@@ -1872,5 +1941,13 @@ version = "3.6.0+0"
 # ╠═626afa0f-f4f0-47bb-b855-10e1ef7c267d
 # ╟─febd8e31-c0c6-4714-b43d-99ac7a7bf8c7
 # ╠═c6975858-e8b5-4780-b6ad-58e729e91021
+# ╠═a1792f51-670b-4f89-a06d-48e4611a9ead
+# ╠═54bbd546-dd7a-452a-a9f3-6d152530cc18
+# ╠═9d8ab3c3-64e5-4283-ae46-f023e50583ac
+# ╠═0d299679-6179-4268-9f48-19306176aaa7
+# ╠═b4d3c912-852f-45af-b859-007cd5ca2cee
+# ╠═f640239c-3fde-4cef-8a3a-dd07c73cee0d
+# ╠═d0355260-97c1-4567-99a3-103ecb6dc331
+# ╠═67cb0e6c-2732-4956-a516-9587ba22c5e8
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
