@@ -169,10 +169,13 @@ function main()
     gavg_softd = sum(hepmc3_files_df[:, :ExJets] .* hepmc3_files_df[:, :softdrop_time]) / sum(hepmc3_files_df[:, :ExJets])
     gavg_massd = sum(hepmc3_files_df[:, :ExJets] .* hepmc3_files_df[:, :massdrop_time]) / sum(hepmc3_files_df[:, :ExJets])
 
-    println("Filter: $gavg_filter")
-    println("Trim: $gavg_trim")
-    println("Massdrop: $gavg_massd")
-    println("Softdrop: $gavg_softd")
+    # Construct a new dataframe with the summary values
+    summary_df = DataFrame("Method" => ["Filter", "Trim", "Massdrop", "Softdrop"],
+                            "Time" => [gavg_filter, gavg_trim, gavg_massd, gavg_softd])
+    println(summary_df)
+    if !isnothing(args[:results])
+        CSV.write("summary-" * args[:results], summary_df)
+    end
 end
 
 main()
