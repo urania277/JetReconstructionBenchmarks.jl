@@ -12,6 +12,7 @@ using LoopVectorization
 using Statistics
 using Printf
 using SIMD
+using Infiltrator
 
 function fast_findmin(dij::DenseVector{T}, n) where T
     best = 1
@@ -41,12 +42,12 @@ function julia_findmin(dij::DenseVector{T}, n) where T
     findmin(@view dij[1:n])
 end
 
-function naive_findmin(dij::DenseVector{T}, n) where T
-    u = view(dij, 1:n)
-    x = @fastmath foldl(min, u)
-    i = findfirst(==(x), u)::Int
-    x, i
-end
+# function naive_findmin(dij::DenseVector{T}, n) where T
+#     u = view(dij, 1:n)
+#     x = @fastmath foldl(min, u)
+#     i = findfirst(==(x), u)::Int
+#     x, i
+# end
 
 function naive_findmin(dij::DenseVector{T}, n) where T
     x = @fastmath foldl(min, @view dij[1:n])
@@ -56,6 +57,12 @@ end
 
 function naive_findmin_reduce(dij::DenseVector{T}, n) where T
     x = @fastmath reduce(min, @view dij[1:n])
+    i = findfirst(==(x), dij)::Int
+    x, i
+end
+
+function naive_findmin_minimum(dij::DenseVector{T}, n) where T
+    x = @fastmath minimum(@view dij[1:n])
     i = findfirst(==(x), dij)::Int
     x, i
 end
@@ -79,6 +86,7 @@ function fast_findmin_simd(dij::DenseVector{T}, n) where T
     end
 
     min_value = SIMD.minimum(minvals)
+    # min_index = findfirst(==(min_value), minvals)::Int
     min_index = @inbounds min_value == minvals[1] ? min_indices[1] : min_value == minvals[2] ? min_indices[2] :
                 min_value == minvals[3] ? min_indices[3] : min_value == minvals[4] ? min_indices[4] :
                 min_value == minvals[5] ? min_indices[5] : min_value == minvals[6] ? min_indices[6] :
@@ -121,7 +129,7 @@ end
 
 function main(ARGS)
     # Setup the random array
-    v = rand(400)
+    v = rand(450)
 
     # Run the benchmark
     println("Running the benchmark for an array of length $(length(v))")
@@ -131,7 +139,11 @@ function main(ARGS)
     report(julia_findmin, v)
     report(naive_findmin, v)
     report(naive_findmin_reduce, v)
+    report(naive_findmin_minimum, v)
     report(fast_findmin_simd, v)
+
+    # On the REPL we now drop into infiltrator...
+    @infiltrate
 end
 
 main(ARGS)
