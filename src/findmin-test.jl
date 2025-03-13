@@ -1,5 +1,5 @@
 ### A Pluto.jl notebook ###
-# v0.19.46
+# v0.20.4
 
 using Markdown
 using InteractiveUtils
@@ -86,6 +86,27 @@ end
 # ╔═╡ 708cf089-9051-45de-84de-92b0cb2556c8
 @be naive_findmin(x)
 
+# ╔═╡ 496dd7f5-2669-4d5e-8f75-cefb33931ba6
+@code_llvm fast_findmin(x, array_size)
+
+# ╔═╡ 435ad5f2-5b50-4bf4-adb1-d3253889291c
+@code_llvm findmin(x)
+
+# ╔═╡ debf5715-18ee-4919-8585-4216924716c5
+struct IVTuple
+	i::Int
+	value::Float64
+end
+
+# ╔═╡ 6d9bf8e4-0aea-4f1b-ac53-0bd2354aa3af
+iv(v::Vector{T}, i::Int) where T = IVTuple(i, v[i])
+
+# ╔═╡ 3a7eacb2-9b3e-4805-ad13-4e53a061ca0a
+iv(x, 10)
+
+# ╔═╡ 8ed7b364-8525-42a9-941d-c6b28f113be9
+Base.:<(x::IVTuple, y::IVTuple) = x.value < y.value
+
 # ╔═╡ 7a53ee87-d302-47ef-a5b6-f6650fefeb10
 function basic_findmin(dij, n)
    best = 1
@@ -102,11 +123,23 @@ end
 # ╔═╡ 7567da79-9657-42c3-860a-7b8026e70ab7
 @be basic_findmin(x, array_size)
 
-# ╔═╡ 496dd7f5-2669-4d5e-8f75-cefb33931ba6
-@code_lowered fast_findmin(x, array_size)
+# ╔═╡ 39a7f57c-bd7a-4fbd-9486-01098f198ab1
+x1=iv(x, 20)
 
-# ╔═╡ 435ad5f2-5b50-4bf4-adb1-d3253889291c
-@code_lowered findmin(x)
+# ╔═╡ 3ccb5421-53ac-4deb-acc8-42670c740ec8
+x2=iv(x,99)
+
+# ╔═╡ 4798788e-fd6b-4a5b-9115-dc249f81c881
+x1 < x2
+
+# ╔═╡ 7d2622eb-5ee8-4763-9e87-a284f30f0c17
+x2 < x1
+
+# ╔═╡ 9d32ba80-b542-451d-8a96-4b288f6ec80d
+x1 > x2
+
+# ╔═╡ f3df4abd-7b31-491c-9833-ff4744bc0766
+x1 == x2
 
 # ╔═╡ 00000000-0000-0000-0000-000000000001
 PLUTO_PROJECT_TOML_CONTENTS = """
@@ -125,7 +158,7 @@ LoopVectorization = "~0.12.171"
 PLUTO_MANIFEST_TOML_CONTENTS = """
 # This file is machine-generated - editing it directly is not advised
 
-julia_version = "1.11.1"
+julia_version = "1.11.4"
 manifest_format = "2.0"
 project_hash = "d8d6cba016d47c6446b96c0a081324d53213a819"
 
@@ -506,5 +539,15 @@ version = "5.11.0+0"
 # ╠═7567da79-9657-42c3-860a-7b8026e70ab7
 # ╠═496dd7f5-2669-4d5e-8f75-cefb33931ba6
 # ╠═435ad5f2-5b50-4bf4-adb1-d3253889291c
+# ╠═debf5715-18ee-4919-8585-4216924716c5
+# ╠═6d9bf8e4-0aea-4f1b-ac53-0bd2354aa3af
+# ╠═3a7eacb2-9b3e-4805-ad13-4e53a061ca0a
+# ╠═8ed7b364-8525-42a9-941d-c6b28f113be9
+# ╠═39a7f57c-bd7a-4fbd-9486-01098f198ab1
+# ╠═3ccb5421-53ac-4deb-acc8-42670c740ec8
+# ╠═4798788e-fd6b-4a5b-9115-dc249f81c881
+# ╠═7d2622eb-5ee8-4763-9e87-a284f30f0c17
+# ╠═9d32ba80-b542-451d-8a96-4b288f6ec80d
+# ╠═f3df4abd-7b31-491c-9833-ff4744bc0766
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
