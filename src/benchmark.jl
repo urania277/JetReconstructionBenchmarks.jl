@@ -29,6 +29,22 @@ function ArgParse.parse_item(opt::Type{E}, s::AbstractString) where {E <: Enum}
     return insts[p]
 end
 
+function determine_compiler(backend::Backends.Backend)
+    if backend == Backends.Julia
+        return string(VERSION)
+    elseif backend == Backends.Fastjet
+        return "unknown"
+    elseif backend in (Backends.Python, Backends.PythonNumPy)
+        output = read(`python --version`, String)
+        m = match(r"Python (\d+\.\d+\.\d+)", output)
+        if isnothing(m)
+            return "unknown"
+        end
+        return m[1]
+    end
+    "unknown"
+end
+
 function hepmc3gunzip(input_file::AbstractString)
     unpacked_file = replace(input_file, ".gz" => "")
     if !isfile(unpacked_file)
@@ -262,6 +278,15 @@ function parse_command_line(args)
     arg_type = Backends.Backend
     default = Backends.Julia
     
+    "--backend-version"
+    help = "Specific version string for the backend used"
+    arg_type = String
+    default = "unknown"
+
+    "--compiler-version"
+    help = "Specific version string for the compiler/interpreter used - will be auto-determined for Julia and Python"
+    arg_type = String
+
     "--info"
     help = "Print info level log messages"
     action = :store_true
@@ -310,6 +335,9 @@ function main()
         hepmc3_files_df[:, :File] = map(basename, hepmc3_files_df[:, :File_path])
         hepmc3_files_df[:, :mean_particles] .= -1
     end
+
+    # Get consistent algorithm and power here, so that missing values are filled
+    (power, algorithm) = JetReconstruction.get_algorithm_power_consistency(p = args[:power], algorithm = args[:algorithm])
     
     event_timing = Float64[]
     n_samples = Int[]
@@ -354,8 +382,17 @@ function main()
         
         push!(event_timing, time_per_event)
     end
+    # Add results to the DataFrame
     hepmc3_files_df[:, :n_samples] = n_samples
     hepmc3_files_df[:, :time_per_event] = event_timing
+
+    # Decorate the DataFrame with the metadata of the runs
+    hepmc3_files_df[:, :backend] .= args[:backend]
+    hepmc3_files_df[:, :algorithm] .= algorithm
+    hepmc3_files_df[:, :strategy] .= args[:strategy]
+    hepmc3_files_df[:, :R] .= args[:distance]
+    hepmc3_files_df[:, :p] .= power
+    hepmc3_files_df[:, :compiler_version] .= isnothing(args[:compiler_version]) ? determine_compiler(args[:backend]) : args[:compiler_version]
     println(hepmc3_files_df)
     
     # Write out the results
