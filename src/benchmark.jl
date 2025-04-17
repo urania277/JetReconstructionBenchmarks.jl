@@ -16,8 +16,8 @@ using LorentzVectorHEP
 using JetReconstruction
 
 # Backends for the jet reconstruction
-@enumx T=Backend Backends Julia Fastjet Python PythonNumPy
-const AllBackends = [String(Symbol(x)) for x in instances(Backends.Backend)]
+@enumx T=Code Backends JetReconstruction Fastjet AkTPython AkTNumPy
+const AllCodeBackends = [String(Symbol(x)) for x in instances(Backends.Code)]
 
 # Parsing for Enum types
 function ArgParse.parse_item(opt::Type{E}, s::AbstractString) where {E <: Enum}
@@ -29,18 +29,29 @@ function ArgParse.parse_item(opt::Type{E}, s::AbstractString) where {E <: Enum}
     return insts[p]
 end
 
-function determine_compiler(backend::Backends.Backend)
-    if backend == Backends.Julia
+function determine_backend_version(code::Backends.Code)
+    if code == Backends.JetReconstruction
         return string(VERSION)
-    elseif backend == Backends.Fastjet
+    elseif code == Backends.Fastjet
         return "unknown"
-    elseif backend in (Backends.Python, Backends.PythonNumPy)
+    elseif code in (Backends.AkTPython, Backends.AkTNumPy)
         output = read(`python --version`, String)
         m = match(r"Python (\d+\.\d+\.\d+)", output)
         if isnothing(m)
             return "unknown"
         end
         return m[1]
+    end
+    "unknown"
+end
+
+function determine_backend(code::Backends.Code)
+    if code == Backends.JetReconstruction
+        return "Julia"
+    elseif code == Backends.Fastjet
+        return "C++"
+    elseif code in (Backends.AkTPython, Backends.AkTNumPy)
+        return "Python"
     end
     "unknown"
 end
@@ -170,7 +181,7 @@ function fastjet_jet_process_avg_time(input_file::AbstractString;
     min
 end
 
-function python_jet_process_avg_time(backend::Backends.Backend,
+function python_jet_process_avg_time(backend::Backends.Code,
     input_file::AbstractString;
     ptmin::Float64 = 5.0,
     distance::Float64 = 0.4,
@@ -211,7 +222,7 @@ function python_jet_process_avg_time(backend::Backends.Backend,
     end
 
     # Accelerated or not?
-    if backend == Backends.PythonNumPy
+    if backend == Backends.AkTNumPy
         py_args = ["--numba"]
     end
     
@@ -273,18 +284,22 @@ function parse_command_line(args)
     arg_type = Int
     default = 1
     
-    "--backend"
-    help = """Backend to use for the jet reconstruction: $(join(AllBackends, ", "))"""
-    arg_type = Backends.Backend
-    default = Backends.Julia
+    "--code"
+    help = """Code backend to use for the jet reconstruction: $(join(AllCodeBackends, ", "))"""
+    arg_type = Backends.Code
+    default = Backends.JetReconstruction
     
-    "--backend-version"
-    help = "Specific version string for the backend used"
+    "--code-version"
+    help = "Specific version string for the code backend used"
     arg_type = String
     default = "unknown"
 
-    "--compiler-version"
-    help = "Specific version string for the compiler/interpreter used - will be auto-determined for Julia and Python"
+    "--backend"
+    help = """Backend used by the code - will be set automatically for Python and Julia, but Fastjet may benefit from being set manually (e.g., gcc or clang)"""
+    arg_type = String
+
+    "--backend-version"
+    help = """Specific version string for the backend used - will be set automatically for Python and Julia, but Fastjet may benefit from being set manually"""
     arg_type = String
 
     "--info"
@@ -296,7 +311,7 @@ function parse_command_line(args)
     action = :store_true
     
     "--results"
-    help = "Write results in CSV format to this directory/file. If a directory is given, a file named 'BACKEND-ALGORITHM-STRATEGY-RADIUS.csv' will be created."
+    help = """Write results in CSV format to this directory/file. If a directory is given, a file named 'BACKEND-ALGORITHM-STRATEGY-RADIUS.csv' will be created."""
     
     "files"
     help = "HepMC3 event files in to process or CSV file listing event files"
@@ -350,7 +365,7 @@ function main()
         end
         push!(n_samples, samples)
         
-        if args[:backend] == Backends.Julia
+        if args[:code] == Backends.JetReconstruction
             # Try to read events into the correct type!
             if JetReconstruction.is_ee(args[:algorithm])
                 JetType = EEjet
@@ -364,15 +379,15 @@ function main()
             p = args[:power],
             strategy = args[:strategy],
             nsamples = samples, repeats = args[:repeats])
-        elseif args[:backend] == Backends.Fastjet
+        elseif args[:code] == Backends.Fastjet
             time_per_event = fastjet_jet_process_avg_time(event_file; ptmin = args[:ptmin],
             distance = args[:distance],
             algorithm = args[:algorithm],
             p = args[:power],
             strategy = args[:strategy],
             nsamples = samples)
-        elseif args[:backend] in (Backends.Python, Backends.PythonNumPy)
-            time_per_event = python_jet_process_avg_time(args[:backend], event_file; ptmin = args[:ptmin],
+        elseif args[:code] in (Backends.AkTPython, Backends.AkTNumPy)
+            time_per_event = python_jet_process_avg_time(args[:code], event_file; ptmin = args[:ptmin],
             distance = args[:distance],
             algorithm = args[:algorithm],
             p = args[:power],
@@ -387,12 +402,14 @@ function main()
     hepmc3_files_df[:, :time_per_event] = event_timing
 
     # Decorate the DataFrame with the metadata of the runs
-    hepmc3_files_df[:, :backend] .= args[:backend]
+    hepmc3_files_df[:, :code] .= args[:code]
+    hepmc3_files_df[:, :code_version] .= args[:code_version]
     hepmc3_files_df[:, :algorithm] .= algorithm
     hepmc3_files_df[:, :strategy] .= args[:strategy]
     hepmc3_files_df[:, :R] .= args[:distance]
     hepmc3_files_df[:, :p] .= power
-    hepmc3_files_df[:, :compiler_version] .= isnothing(args[:compiler_version]) ? determine_compiler(args[:backend]) : args[:compiler_version]
+    hepmc3_files_df[:, :backend] .= isnothing(args[:backend]) ? determine_backend(args[:code]) : args[:backend]
+    hepmc3_files_df[:, :backend_version] .= isnothing(args[:backend_version]) ? determine_backend_version(args[:code]) : args[:backend_version]
     println(hepmc3_files_df)
     
     # Write out the results
