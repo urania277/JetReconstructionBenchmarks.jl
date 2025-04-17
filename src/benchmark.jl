@@ -16,7 +16,7 @@ using LorentzVectorHEP
 using JetReconstruction
 
 # Backends for the jet reconstruction
-@enumx T=Backend Backends Julia FastJet Python PythonNumPy
+@enumx T=Backend Backends Julia Fastjet Python PythonNumPy
 const AllBackends = [String(Symbol(x)) for x in instances(Backends.Backend)]
 
 # Parsing for Enum types
@@ -50,7 +50,7 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
     strategy::RecoStrategy.Strategy,
     nsamples::Integer = 1,
     repeats::Int = 1)
-    @info "Will process $(size(events)[1]) events"
+    @info "Will process $(size(events)[1]) events, repeating $(repeats) time(s)"
     
     # Set consistent algorithm and power
     (p, algorithm) = JetReconstruction.get_algorithm_power_consistency(p = p,
@@ -146,7 +146,12 @@ function fastjet_jet_process_avg_time(input_file::AbstractString;
     push!(fj_args, "-n", string(nsamples))
     @info "Fastjet command: $fj_bin $fj_args $input_file"
     fj_output = read(`$fj_bin $fj_args $input_file`, String)
-    tryparse(Float64, match(r"Lowest time per event ([\d\.]+) us", fj_output)[1])
+    min = tryparse(Float64, match(r"Lowest time per event ([\d\.]+) us", fj_output)[1])
+    if isnothing(min)
+        @error "Failed to parse output from FastJet script"
+        return 0.0
+    end
+    min
 end
 
 function python_jet_process_avg_time(backend::Backends.Backend,
@@ -203,7 +208,12 @@ function python_jet_process_avg_time(backend::Backends.Backend,
     push!(py_args, "--trials", string(nsamples))
     @info "Python command: $py_script $py_args $input_file"
     py_output = read(`$py_script $py_args $input_file`, String)
-    tryparse(Float64, match(r"Minimum time per event ([\d\.]+) us", py_output)[1])
+    min = tryparse(Float64, match(r"Minimum time per event ([\d\.]+) us", py_output)[1])
+    if isnothing(min)
+        @error "Failed to parse output from Python script"
+        return 0.0
+    end
+    min
 end
 
 function parse_command_line(args)
@@ -326,7 +336,7 @@ function main()
             p = args[:power],
             strategy = args[:strategy],
             nsamples = samples, repeats = args[:repeats])
-        elseif args[:backend] == Backends.FastJet
+        elseif args[:backend] == Backends.Fastjet
             time_per_event = fastjet_jet_process_avg_time(event_file; ptmin = args[:ptmin],
             distance = args[:distance],
             algorithm = args[:algorithm],
