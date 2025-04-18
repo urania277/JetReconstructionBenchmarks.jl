@@ -69,14 +69,14 @@ function hepmc3gunzip(input_file::AbstractString)
     unpacked_file
 end
 
-function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
+function julia_jet_process_avg_time(events::Vector{Vector{T}};
     ptmin::Float64 = 5.0,
-    distance::Float64 = 0.4,
+    radius::Float64 = 0.4,
     p::Union{Real, Nothing} = nothing,
     algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
     strategy::RecoStrategy.Strategy,
     nsamples::Integer = 1,
-    repeats::Int = 1)
+    repeats::Int = 1) where {T <: JetReconstruction.FourMomentum}
     @info "Will process $(size(events)[1]) events, repeating $(repeats) time(s)"
     
     # Set consistent algorithm and power
@@ -89,7 +89,7 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
     if nsamples > 1
         @info "Doing initial warm-up run"
         for event in events
-            _ = inclusive_jets(jet_reconstruct(event, R = distance, p = p,
+            _ = inclusive_jets(jet_reconstruct(event, R = radius, p = p,
             strategy = strategy); ptmin = ptmin)
         end
     end
@@ -112,7 +112,7 @@ function julia_jet_process_avg_time(events::Vector{Vector{PseudoJet}};
         Threads.@threads for event_counter ∈ 1:n_events * repeats
             event_idx = mod1(event_counter, n_events)
             my_t = Threads.threadid()
-            inclusive_jets(jet_reconstruct(events[event_idx], R = distance, p = p,
+            inclusive_jets(jet_reconstruct(events[event_idx], R = radius, p = p,
             strategy = strategy), ptmin = ptmin)
         end
         t_stop = time_ns()
@@ -147,7 +147,7 @@ end
 
 function fastjet_jet_process_avg_time(input_file::AbstractString;
     ptmin::Float64 = 5.0,
-    distance::Float64 = 0.4,
+    radius::Float64 = 0.4,
     p::Union{Real, Nothing} = nothing,
     algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
     strategy::RecoStrategy.Strategy,
@@ -167,7 +167,7 @@ function fastjet_jet_process_avg_time(input_file::AbstractString;
     fj_args = String[]
     push!(fj_args, "-p", string(p))
     push!(fj_args, "-s", string(strategy))
-    push!(fj_args, "-R", string(distance))
+    push!(fj_args, "-R", string(radius))
     push!(fj_args, "--ptmin", string(ptmin))
     
     push!(fj_args, "-n", string(nsamples))
@@ -184,7 +184,7 @@ end
 function python_jet_process_avg_time(backend::Backends.Code,
     input_file::AbstractString;
     ptmin::Float64 = 5.0,
-    distance::Float64 = 0.4,
+    radius::Float64 = 0.4,
     p::Union{Real, Nothing} = nothing,
     algorithm::JetAlgorithm.Algorithm = JetAlgorithm.AntiKt,
     strategy::RecoStrategy.Strategy,
@@ -229,7 +229,7 @@ function python_jet_process_avg_time(backend::Backends.Code,
     # Ensure that all events are processed
     push!(py_args, "--maxevents", "100")
 
-    push!(py_args, "--radius", string(distance))
+    push!(py_args, "--radius", string(radius))
     push!(py_args, "--ptmin", string(ptmin))
     
     push!(py_args, "--trials", string(nsamples))
@@ -251,8 +251,8 @@ function parse_command_line(args)
     arg_type = Float64
     default = 5.0
     
-    "--distance", "-R"
-    help = "Distance parameter for jet merging"
+    "--radius", "-R"
+    help = "Radius parameter for jet merging"
     arg_type = Float64
     default = 0.4
     
@@ -368,27 +368,27 @@ function main()
         if args[:code] == Backends.JetReconstruction
             # Try to read events into the correct type!
             if JetReconstruction.is_ee(args[:algorithm])
-                JetType = EEjet
+                JetType = EEJet
             else
                 JetType = PseudoJet
             end
             events::Vector{Vector{JetType}} = read_final_state_particles(event_file; T = JetType)
             time_per_event = julia_jet_process_avg_time(events; ptmin = args[:ptmin],
-            distance = args[:distance],
+            radius = args[:radius],
             algorithm = args[:algorithm],
             p = args[:power],
             strategy = args[:strategy],
             nsamples = samples, repeats = args[:repeats])
         elseif args[:code] == Backends.Fastjet
             time_per_event = fastjet_jet_process_avg_time(event_file; ptmin = args[:ptmin],
-            distance = args[:distance],
+            radius = args[:radius],
             algorithm = args[:algorithm],
             p = args[:power],
             strategy = args[:strategy],
             nsamples = samples)
         elseif args[:code] in (Backends.AkTPython, Backends.AkTNumPy)
             time_per_event = python_jet_process_avg_time(args[:code], event_file; ptmin = args[:ptmin],
-            distance = args[:distance],
+            radius = args[:radius],
             algorithm = args[:algorithm],
             p = args[:power],
             strategy = args[:strategy],
@@ -406,18 +406,22 @@ function main()
     hepmc3_files_df[:, :code_version] .= args[:code_version]
     hepmc3_files_df[:, :algorithm] .= algorithm
     hepmc3_files_df[:, :strategy] .= args[:strategy]
-    hepmc3_files_df[:, :R] .= args[:distance]
-    hepmc3_files_df[:, :p] .= power
-    hepmc3_files_df[:, :backend] .= isnothing(args[:backend]) ? determine_backend(args[:code]) : args[:backend]
-    hepmc3_files_df[:, :backend_version] .= isnothing(args[:backend_version]) ? determine_backend_version(args[:code]) : args[:backend_version]
+    hepmc3_files_df[:, :radius] .= args[:radius]
+    hepmc3_files_df[:, :power] .= power
+
+    backend = isnothing(args[:backend]) ? determine_backend(args[:code]) : args[:backend]
+    backend_version = isnothing(args[:backend_version]) ? determine_backend_version(args[:code]) : args[:backend_version]
+    hepmc3_files_df[:, :backend] .= backend
+    hepmc3_files_df[:, :backend_version] .= backend_version
+
     println(hepmc3_files_df)
     
     # Write out the results
     if !isnothing(args[:results])
         if isdir(args[:results])
             results_file = joinpath(args[:results],
-            "$(args[:backend])_$(args[:algorithm])_" *
-            "$(args[:strategy])_R$(args[:distance])_P$(args[:power]).csv")
+            "$(args[:code])_$(args[:code_version])_$(args[:algorithm])_" *
+            "$(args[:strategy])_R$(args[:radius])_P$(power)_$(backend)_$(backend_version).csv")
         else
             results_file = args[:results]
         end
