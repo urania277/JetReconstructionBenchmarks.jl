@@ -34,16 +34,16 @@ using Time = std::chrono::high_resolution_clock;
 using us = std::chrono::microseconds;
 
 fastjet::ClusterSequence run_fastjet_clustering(std::vector<fastjet::PseudoJet> input_particles,
-  fastjet::Strategy strategy, fastjet::JetAlgorithm algorithm, double R, double p) {
+  fastjet::Strategy strategy, fastjet::JetAlgorithm algorithm, fastjet::RecombinationScheme recombine_scheme, 
+  double R, double p) {
 
-  fastjet::RecombinationScheme recomb_scheme=fastjet::E_scheme;
   fastjet::JetDefinition jet_definition;
   if (algorithm == fastjet::genkt_algorithm || algorithm == fastjet::ee_genkt_algorithm) {
-    jet_definition = fastjet::JetDefinition(algorithm, R, p, recomb_scheme, strategy);
+    jet_definition = fastjet::JetDefinition(algorithm, R, p, recombine_scheme, strategy);
   } else if (algorithm == fastjet::ee_kt_algorithm) {
-    jet_definition = fastjet::JetDefinition(algorithm, recomb_scheme, strategy);
+    jet_definition = fastjet::JetDefinition(algorithm, recombine_scheme, strategy);
   } else {
-    jet_definition = fastjet::JetDefinition(algorithm, R, recomb_scheme, strategy);
+    jet_definition = fastjet::JetDefinition(algorithm, R, recombine_scheme, strategy);
   }
 
   // run the jet clustering with the above jet definition
@@ -81,6 +81,7 @@ int main(int argc, char* argv[]) {
   string mystrategy = "Best";
   double power = -1.0;
   string alg = "";
+  string recombine = "";
   double R = 0.4;
   string dump_file = "";
 
@@ -93,6 +94,7 @@ int main(int argc, char* argv[]) {
   auto power_option = opts.add<Value<double>>("p", "power", "Algorithm p value: -1=antikt, 0=cambridge_aachen, 1=inclusive kt; otherwise generalised Kt", power, &power);
   auto alg_option = opts.add<Value<string>>("A", "algorithm", "Algorithm: AntiKt CA Kt GenKt EEKt Durham (overrides power)", alg, &alg);
   auto radius_option = opts.add<Value<double>>("R", "radius", "Algorithm R parameter", R, &R);
+  auto recombine_option = opts.add<Value<string>>("", "recombine", "Recombination scheme for jet merging", recombine, &recombine);
   auto ptmin_option = opts.add<Value<double>>("", "ptmin", "pt cut for inclusive jets");
   auto dijmax_option = opts.add<Value<double>>("", "dijmax", "dijmax value for exclusive jets");
   auto njets_option = opts.add<Value<int>>("", "njets", "njets value for exclusive jets");
@@ -173,7 +175,16 @@ int main(int argc, char* argv[]) {
     }
   }
 
-  std::cout << "Strategy: " << mystrategy << "; Power: " << power << "; Algorithm " << algorithm << std::endl;
+  auto recombine_scheme = fastjet::RecombinationScheme::E_scheme;
+  std::cout << recombine << std::endl;
+  if (recombine == "pt_scheme") {
+    recombine_scheme = fastjet::RecombinationScheme::pt_scheme;
+  } else if (recombine == "pt2_scheme") {
+    recombine_scheme = fastjet::RecombinationScheme::pt2_scheme;
+  }
+
+  std::cout << "Strategy: " << mystrategy << "; Power: " << power << "; Algorithm " << algorithm << 
+    "; Recombine " << recombine_scheme << std::endl;
 
   auto dump_fh = stdout;
   if (dump_option->is_set()) {
@@ -190,16 +201,17 @@ int main(int argc, char* argv[]) {
     std::cout << "Trial " << trial << " ";
     auto start_t = std::chrono::steady_clock::now();
     for (size_t ievt = skip_events_option->value(); ievt < events.size(); ++ievt) {
-      auto cluster_sequence = run_fastjet_clustering(events[ievt], strategy, algorithm, R, power);
+      auto cluster_sequence = run_fastjet_clustering(events[ievt], strategy, algorithm, recombine_scheme, R, power);
 
       vector<fastjet::PseudoJet> final_jets;
       if (ptmin_option->is_set()) {
-        final_jets = sorted_by_pt(cluster_sequence.inclusive_jets(ptmin_option->value()));
+        final_jets = fastjet::sorted_by_pt(cluster_sequence.inclusive_jets(ptmin_option->value()));
       } else if (dijmax_option->is_set()) {
         cout << "dijmax: " << dijmax_option->value() << endl;
-        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(dijmax_option->value()));
+        final_jets = fastjet::sorted_by_pt(cluster_sequence.inclusive_jets(ptmin_option->value()));
+        final_jets = fastjet::sorted_by_pt(cluster_sequence.exclusive_jets(dijmax_option->value()));
       } else if (njets_option->is_set()) {
-        final_jets = sorted_by_pt(cluster_sequence.exclusive_jets(njets_option->value()));
+        final_jets = fastjet::sorted_by_pt(cluster_sequence.exclusive_jets(njets_option->value()));
       }
 
       if (dump_option->is_set() && trial==0) {
