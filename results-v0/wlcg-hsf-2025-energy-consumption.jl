@@ -26,7 +26,7 @@ using LaTeXStrings
 using DataFramesMeta
 
 # ╔═╡ 6fe93b62-10d2-49f8-8266-52fe73a42cbb
-md"""# WLCG/HSF 2025 Energy Consumption plots"""
+md"""# WLCG/HSF 2025 Energy consumption plots for Julia talk"""
 
 # ╔═╡ 366c4a1a-6c61-48a7-8863-ff6bc76c255d
 begin
@@ -106,19 +106,54 @@ md"Trying to add a parameter that is a DataFrame's column, and failing. The reas
    * need to pass the other parameters apart from the varying one, so the plot can be standalone" 
 
 # ╔═╡ aff019ee-d121-4042-bb50-0ce4b4525793
-function time_per_event_plot(df_list; 
+function time_per_event_plot_backend(df_list; 
 							 title="Runtime scaling with mean number of particles",
+						     backend = "Julia",
 							 filename = nothing)
 	fig = Figure()
     ax = Axis(fig[1, 1],
               title = title,
-              xlabel = "Mean number of particles", ylabel = "Time-per-event (s)",
-				limits = (nothing, nothing, 0.0, nothing))
+              xlabel = "Mean number of particles", 
+			  ylabel = "Time-per-event (s)",
+			  limits = (nothing, nothing, 0.0, nothing),)
+	
+	
 	for (i,df) in enumerate(df_list) 
+		current_label = string("v"*df[1, :backend_version])
+
 		lines!(ax, df[!, :mean_particles], df[!, :time_per_event],
 			   color = ColorSchemes.seaborn_colorblind[i])
 		scatter!(ax, df[!, :mean_particles], df[!, :time_per_event],
-				 color = ColorSchemes.seaborn_colorblind[i], label = "Tiled")
+				 color = ColorSchemes.seaborn_colorblind[i], label = current_label)
+	end		
+    axislegend(position = :lt)
+	if !isnothing(filename)
+		save(joinpath(plot_output_dir, filename), fig)
+	end
+	fig
+end
+
+# ╔═╡ 3098e124-1216-43e2-8f7c-55e23921da54
+md"I don't understand why the log y doesn't work here"
+
+# ╔═╡ bae20c5f-c06f-40ab-901c-9310ff0209ea
+function time_per_event_plot_languages(df_list; 
+							 title="Runtime scaling with mean number of particles",
+						     backend = "Julia",
+							 filename = nothing)
+	fig = Figure()
+    ax = Axis(fig[1, 1],
+              title = title,
+			  yscale = :log10,
+			  xlabel = "Mean number of particles", ylabel = "Time-per-event (s)",
+				limits = (nothing, nothing, 0.000001, nothing))
+	for (i,df) in enumerate(df_list) 
+		current_label = string(df[1, :backend])
+
+		lines!(ax, df[!, :mean_particles], df[!, :time_per_event],
+			   color = ColorSchemes.seaborn_colorblind[i])
+		scatter!(ax, df[!, :mean_particles], df[!, :time_per_event],
+				 color = ColorSchemes.seaborn_colorblind[i], label = current_label)
 	end		
     axislegend(position = :lt)
 	if !isnothing(filename)
@@ -145,6 +180,9 @@ begin
 	codes_cpp = ["Fastjet"]
 end
 
+# ╔═╡ 2b9ece67-9b44-42c4-ac95-226701f9a2b6
+
+
 # ╔═╡ 8160be2b-15da-4a09-87be-322f992b4635
 md"*Plot 1*: Julia versions"
 
@@ -154,8 +192,6 @@ begin
 	this_radius_criterion = 4.0
 	this_code_criterion = "JetReconstruction"
 	this_backend = "Julia"
-	column_for_title = ""
-	legend = string("R= ", this_radius_criterion/10.)
 	df_list_to_plot = []
 	for backend_version in backend_versions_julia 
 		this_subset = select(giant_data_frame, 
@@ -166,12 +202,76 @@ begin
 							 radius_criterion=4.0)
 		push!(df_list_to_plot,this_subset)
 	end 
-
-	time_per_event_plot(df_list_to_plot, 
-						title=L"Time per event,  "*this_backend, 
+	time_per_event_plot_backend(df_list_to_plot, 
+						backend = this_backend,
+						title="Time per event, "*this_backend*", "*this_strategy_criterion*", R="*string(this_radius_criterion/10.), 
 						filename="$(plot_prefix)"*this_backend*"_versions.png")
 
+
+
 end
+
+# ╔═╡ dafc0dc4-c0be-4696-9f94-a6787b956b86
+md"*Plot 2*: Best-of versions (a guess, taking highest versions)"
+
+# ╔═╡ 6fa08726-58a9-4a8e-96eb-215076a3c179
+begin
+	
+	backend_criteria = ["Julia", "Python", "C++"]
+	backend_versions = ["1.11.5","3.13.3","unknown"]
+	code_criteria = ["JetReconstruction","AkTPython","Fastjet"]
+
+	df_list_to_plot_all = []
+
+	for i in [1,2,3]
+
+		this_subset = select(giant_data_frame, 
+					 backend_criterion=backend_criteria[i],
+					 code_criterion = code_criteria[i],
+					 strategy_criterion=this_strategy_criterion,
+					 backend_version_criterion=backend_versions[i],
+					 radius_criterion=this_radius_criterion)
+		push!(df_list_to_plot_all,this_subset)
+		
+	end
+	df_list_to_plot_all
+
+	time_per_event_plot_languages(df_list_to_plot_all, 
+						backend = "All languages",
+						title="Time per event, "*this_strategy_criterion*", 
+						R="*string(this_radius_criterion/10.), 
+						filename="$(plot_prefix)languages.png")
+end
+
+# ╔═╡ 91197965-de44-48cd-9701-f42c9a207a09
+# ╠═╡ disabled = true
+#=╠═╡
+begin
+	fig = Figure()
+    ax = Axis(fig[1, 1],
+              title = "Julia versions, Tiled, R=0.4",
+              xlabel = "Mean number of particles", 
+			  ylabel = "Time-per-event (s)",
+			  limits = (nothing, nothing, 0.0, nothing))
+
+	
+	for (i,df) in enumerate(df_list_to_plot) 
+		
+		current_label = string(df[1, :backend_version])
+
+		lines!(ax, df[!, :mean_particles], df[!, :time_per_event],
+			   color = ColorSchemes.seaborn_colorblind[i])
+		scatter!(ax, df[!, :mean_particles], df[!, :time_per_event],
+				 color = ColorSchemes.seaborn_colorblind[i], label = "Julia, "*current_label)
+	end		
+	axislegend(position = :lt)
+	
+    if !isnothing("myFile.png")
+		save(joinpath(plot_output_dir, "Julia_versions_everything_fixed.png"), fig)
+	end
+	fig
+end
+  ╠═╡ =#
 
 # ╔═╡ cc43827c-5bee-483b-8958-16010c2a4bfc
 
@@ -1761,11 +1861,17 @@ version = "3.6.0+0"
 # ╠═54c74787-2e83-431a-8db2-4887ed8df151
 # ╠═deeb1252-b31a-4717-bf17-db62c4659afd
 # ╠═aff019ee-d121-4042-bb50-0ce4b4525793
+# ╠═3098e124-1216-43e2-8f7c-55e23921da54
+# ╠═bae20c5f-c06f-40ab-901c-9310ff0209ea
 # ╟─252bfebe-f81d-445e-8e72-5e1f4c7c9cad
 # ╠═e5a3744c-810b-43da-b309-cf0ffafdcb0f
 # ╠═236704a5-ecab-4225-a6d3-165572095f7f
+# ╠═2b9ece67-9b44-42c4-ac95-226701f9a2b6
 # ╠═8160be2b-15da-4a09-87be-322f992b4635
 # ╠═e868f76a-5654-48ff-b80a-2e222084f432
+# ╠═dafc0dc4-c0be-4696-9f94-a6787b956b86
+# ╠═6fa08726-58a9-4a8e-96eb-215076a3c179
+# ╠═91197965-de44-48cd-9701-f42c9a207a09
 # ╟─cc43827c-5bee-483b-8958-16010c2a4bfc
 # ╟─00000000-0000-0000-0000-000000000001
 # ╟─00000000-0000-0000-0000-000000000002
