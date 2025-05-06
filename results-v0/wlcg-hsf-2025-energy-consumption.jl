@@ -13,11 +13,11 @@ using CSV
 # ╔═╡ 9c5e999c-543b-4aee-a765-f959ced2784d
 using CairoMakie
 
-# ╔═╡ ace11e49-9292-4de0-8388-7ac5f0c95000
-using Makie.Colors
-
 # ╔═╡ 03c2f757-0085-4d6c-b417-f784b460646f
 using ColorSchemes
+
+# ╔═╡ cad8bf86-64cc-488a-86e9-20c506f0494a
+using Colors
 
 # ╔═╡ c682594e-0dbe-419a-8f31-0ad669c0c0d0
 using LaTeXStrings
@@ -27,6 +27,12 @@ using DataFramesMeta
 
 # ╔═╡ 6fe93b62-10d2-49f8-8266-52fe73a42cbb
 md"""# WLCG/HSF 2025 Energy consumption plots for Julia talk"""
+
+# ╔═╡ ace11e49-9292-4de0-8388-7ac5f0c95000
+# ╠═╡ disabled = true
+#=╠═╡
+using Makie.Colors
+  ╠═╡ =#
 
 # ╔═╡ 366c4a1a-6c61-48a7-8863-ff6bc76c255d
 begin
@@ -50,7 +56,7 @@ begin
 	all_data_frames = []
 	for this_file_name in file_list  
 		this_input_file = joinpath(@__DIR__, file_dir,this_file_name)
-		this_df = CSV.read(this_input_file, DataFrame)
+		this_df = CSV.read(this_input_file, DataFrame)		
 		push!(all_data_frames,this_df)
 	end
 	all_data_frames
@@ -65,6 +71,8 @@ md"Let's make a giant DataFrame out of all our previous individual DataFrames, t
 # ╔═╡ 9914ada3-9f76-4a6c-822e-f2f940834af2
 begin
 	giant_data_frame = vcat(all_data_frames...)
+	no_ee_giant_data_frame = @groupby(giant_data_frame,:mean_particles)
+	@rsubset!(no_ee_giant_data_frame,:mean_particles .> 100)
 end	
 
 # ╔═╡ baba5d68-9559-40dc-ba1f-4e63c95e7962
@@ -78,7 +86,6 @@ function select(grouped_data_frame;
 				code_criterion = "AkTNumPy",
 			    radius_criterion = 4.0)
 
-	grouped_data_frame = @groupby(giant_data_frame, :backend)
 	subset_data_frame = @rsubset(grouped_data_frame, in.(:backend, Ref([backend_criterion])))
 	@rsubset!(subset_data_frame, in.(:backend_version, Ref([backend_version_criterion])))
 	@rsubset!(subset_data_frame, in.(:code, Ref([code_criterion])))
@@ -103,22 +110,34 @@ end
 # ╔═╡ 437bec04-57d5-464f-a6ab-271bbfa0802c
 begin
 	#This is coming from https://docs.makie.org/stable/reference/plots/scatter#markers
+
+	circle_with_hole = BezierPath([
+	    MoveTo(Point(1, 0)),
+	    EllipticalArc(Point(0, 0), 1, 1, 0, 0, 2pi),
+	    MoveTo(Point(0.5, 0.5)),
+	    LineTo(Point(0.5, -0.5)),
+	    LineTo(Point(-0.5, -0.5)),
+	    LineTo(Point(-0.5, 0.5)),
+	    ClosePath(),
+	])
+		
 	marker_labels = [
     (:circle, ":circle"),
     (:rect, ":rect"),
     (:diamond, ":diamond"),
-    (:hexagon, ":hexagon"),
     (:cross, ":cross"),
+    (:hexagon, ":hexagon"),
     (:xcross, ":xcross"),
     (:utriangle, ":utriangle"),
     (:dtriangle, ":dtriangle"),
     (:ltriangle, ":ltriangle"),
     (:rtriangle, ":rtriangle"),
     (:pentagon, ":pentagon"),
+	('O', "'O'"),
+    (:star8, ":star8"),#c++ 
     (:star4, ":star4"),
     (:star5, ":star5"),
     (:star6, ":star6"),
-    (:star8, ":star8"),
     (:vline, ":vline"),
     (:hline, ":hline"),
     ('a', "'a'"),
@@ -129,42 +148,6 @@ begin
 ]
 end
 
-# ╔═╡ deeb1252-b31a-4717-bf17-db62c4659afd
-md"Trying to add a parameter that is a DataFrame's column, and failing. The reason why we want to have this column is for the legend. Other improvement needed: 
-   * why do I get dollar signs appearing around the title? 
-   * need to pass the other parameters apart from the varying one, so the plot can be standalone" 
-
-# ╔═╡ aff019ee-d121-4042-bb50-0ce4b4525793
-# ╠═╡ disabled = true
-#=╠═╡
-function time_per_event_plot_backend(df_list; 
-							 title="Runtime scaling with mean number of particles",
-						     backend = "Julia",
-							 filename = nothing)
-	fig = Figure()
-    ax = Axis(fig[1, 1],
-              title = title,
-              xlabel = "Mean number of particles", 
-			  ylabel = "Time-per-event (s)",
-			  limits = (nothing, nothing, 0.0, nothing),)
-	
-	
-	for (i,df) in enumerate(df_list) 
-		current_label = string("v"*df[1, :backend_version])
-
-		lines!(ax, df[!, :mean_particles], df[!, :time_per_event],
-			   color = ColorSchemes.seaborn_colorblind[i])
-		scatter!(ax, df[!, :mean_particles], df[!, :time_per_event],
-				 color = ColorSchemes.seaborn_colorblind[i], label = current_label)
-	end		
-    axislegend(position = :lt)
-	if !isnothing(filename)
-		save(joinpath(plot_output_dir, filename), fig)
-	end
-	fig
-end
-  ╠═╡ =#
-
 # ╔═╡ 252bfebe-f81d-445e-8e72-5e1f4c7c9cad
 md"## Actual plotting"
 
@@ -174,29 +157,35 @@ md"As a reminder, these are all possibilities we have. I don't feel brave enough
 # ╔═╡ 236704a5-ecab-4225-a6d3-165572095f7f
 begin
 	backends = ["Julia", "Python", "C++"]
-	backend_versions_julia = ["1.10.9","1.11.5"]
-	backend_versions_python = ["3.11.12","3.12.10","3.13.3"]
+	backend_versions_julia = ["1.9.4","1.10.9","1.11.5"]
+	backend_versions_python = ["3.10.17","3.11.12","3.12.10","3.13.3"]
 	strategies = ["N2Plain","N2Tiled"]
 	radii = [0.5,1.0,2.0,4.0]
-	codes_python = ["AkTPython","AkTNumPy"]
-	codes_julia = ["JetReconstruction"]
-	codes_cpp = ["Fastjet"]
+	codes_criteria_python = ["AkTPython","AkTNumPy"]
+	codes_criteria_julia = ["JetReconstruction"]
+	codes_criteria_cpp = ["Fastjet"]
 end
 
 # ╔═╡ 8160be2b-15da-4a09-87be-322f992b4635
-md"*Plot 1*: Julia versions"
+md"*Plot 1*: Language versions, time-per-event"
 
 # ╔═╡ e868f76a-5654-48ff-b80a-2e222084f432
 begin
+
+	df_list_to_plot = []
 	this_strategy_criterion = "N2Tiled"
 	this_radius_criterion = 4.0
-	this_code_criterion = "JetReconstruction"
-	this_backend = "Julia"
-	df_list_to_plot = []
-	
+		
 	#loop on Julia versions
+	this_backend = "Julia"
+	i_julia = 1
+	this_code_criterion = "JetReconstruction"
+	julia_colors = [ColorSchemes.seaborn_colorblind[1],
+				   ColorSchemes.seaborn_colorblind[10],
+				   ColorSchemes.tableau_colorblind[8]] #3 colors	
+	
 	for backend_version in backend_versions_julia 
-		this_subset = select(giant_data_frame, 
+		this_subset = select(no_ee_giant_data_frame, 
 							 backend_criterion=this_backend, 
 							 code_criterion = this_code_criterion,
 							 strategy_criterion=this_strategy_criterion,
@@ -207,43 +196,112 @@ begin
 	
 	#loop on Python versions
 	this_backend = "Python"
-	this_code_criterion = "AkTPython"
-	for backend_version in backend_versions_python 
-		this_subset = select(giant_data_frame, 
-							 backend_criterion=this_backend, 
-							 code_criterion = this_code_criterion,
-							 strategy_criterion=this_strategy_criterion,
-							 backend_version_criterion=backend_version,
-							 radius_criterion=4.0)
-		push!(df_list_to_plot,this_subset)
-	end 	
+	i_python=1
+	python_colors = [ColorSchemes.seaborn_colorblind[2],
+					ColorSchemes.seaborn_colorblind[4],
+					ColorSchemes.seaborn_colorblind[6],
+					ColorSchemes.seaborn_colorblind[9],
+					ColorSchemes.tableau_colorblind[2],
+					ColorSchemes.tableau_colorblind[9],
+					ColorSchemes.Tam[4],
+					ColorSchemes.Tam[5],
+					] #8 colors
+
 	
-	fig_julia_python = Figure()
-    ax = Axis(fig_julia_python[1, 1],
-              title = "Julia and Python versions, Tiled, R=0.4",
+	for this_code_criterion in codes_criteria_python 
+		for this_backend_version in backend_versions_python 
+			this_subset = select(no_ee_giant_data_frame, 
+								 backend_criterion=this_backend, 
+								 code_criterion = this_code_criterion,
+								 strategy_criterion=this_strategy_criterion,
+								 backend_version_criterion=this_backend_version,
+								 radius_criterion=4.0)
+			push!(df_list_to_plot,this_subset)
+		end
+	end 	
+
+	#select the individual C++ plot to add on top
+	cpp_colors = [ColorSchemes.tableau_colorblind[4]] # 1 color 
+	this_backend = "C++"
+	this_code_criterion = "Fastjet"
+	this_backend_version = "unknown"
+	this_subset = select(no_ee_giant_data_frame,
+						backend_criterion=this_backend, 
+						code_criterion = this_code_criterion,
+						strategy_criterion=this_strategy_criterion,
+						backend_version_criterion=this_backend_version,
+						radius_criterion=4.0)
+	push!(df_list_to_plot,this_subset)
+
+	#### end insertion of dfs in df list
+
+	#### begin plotting
+
+	current_color = ColorSchemes.tol_rainbow[1]
+
+	fig_julia_python_cpp = Figure()
+    ax = Axis(fig_julia_python_cpp[1, 1],
+              title = "C++, Julia and Python versions, AntiKt Tiled, R=0.4",
               xlabel = "Mean number of particles", 
 			  ylabel = "Time-per-event (s)",
-			  #there is probably a better way of placing the legend...
-			  limits = (nothing, nothing, nothing, 10000000),
+			  limits = (120, nothing, nothing, nothing),
 			  yscale = log10,
 			  xscale = log10,
-			  xticks = LogTicks(WilkinsonTicks(3, k_min=3)), 
+			  xticks = [200, 300, 400, 500, 600, 700, 800, 900, 1000],
 		)	
+
 	
 	for (i,df) in enumerate(df_list_to_plot)
 		
+		# plot attributes: label, color, marker
 		current_label = string(df[1, :backend]*", v"*df[1, :backend_version])
-		lines!(ax, 
-			   df[!, :mean_particles], df[!, :time_per_event],
-			   color = ColorSchemes.seaborn_colorblind[i])
-		scatter!(ax, 
+
+		# Julia label and color
+		if (df[1,:backend] == "Julia") 
+			current_color = julia_colors[i_julia]
+			i_julia = i_julia+1
+		end
+		
+		# Python label and color 
+		if (df[1,:backend] == "Python")
+			
+			extra_label_python = ""
+			if string(df[1, :code]) == "AkTNumPy" 
+				extra_label_python = "NumPy"
+			else 
+				extra_label_python = "Native"
+			end
+			
+			current_label = string(df[1, :backend]*", v"*df[1, :backend_version]*", "*extra_label_python)
+			current_color = python_colors[i_python]
+			i_python=i_python+1
+
+		end
+
+		# C++ label and color 		
+		if (df[1,:backend] == "C++") 
+			current_label = string(df[1, :backend])
+			current_color = cpp_colors[1]
+		end
+
+
+
+		# markers (common)
+		current_marker = marker_labels[i][1]
+
+		# plot
+		
+		scatterlines!(ax, 
 				 df[!, :mean_particles], df[!, :time_per_event],
-				 color = ColorSchemes.seaborn_colorblind[i], 
+				 marker = current_marker,
+				 color = current_color,
 				 label = current_label)
+
 	end 
-	axislegend(position = :lt)
-	save(joinpath(plot_output_dir*"_julia_python_language_versions.png"), fig_julia_python)
-	fig_julia_python
+	axislegend(position = :lt, labelsize = 10)
+	
+	save(joinpath(plot_output_dir*"_julia_python_cpp_language_versions.png"), fig_julia_python_cpp)
+	fig_julia_python_cpp
 
 end
 
@@ -255,14 +313,15 @@ begin
 	
 	backend_criteria = ["Julia", "Python", "C++"]
 	backend_versions = ["1.11.5","3.13.3","unknown"]
-	code_criteria = ["JetReconstruction","AkTPython","Fastjet"]
+	code_criteria = ["JetReconstruction","AkTNumPy","Fastjet"]
 
 	df_list_to_plot_all = []
-	fig_languages = Figure()
+	fig_languages_noPython = Figure()
 
-	for i in [1,2,3]
+	#for i in [1,2,3]
+	for i in [1,3]
 
-		this_subset = select(giant_data_frame, 
+		this_subset = select(no_ee_giant_data_frame, 
 					 backend_criterion=backend_criteria[i],
 					 code_criterion = code_criteria[i],
 					 strategy_criterion=this_strategy_criterion,
@@ -271,54 +330,175 @@ begin
 		push!(df_list_to_plot_all,this_subset)
 		
 	end
-	df_list_to_plot_all
 
 	#To be fixed: weird axis tick labels in log scale on x axis
 	#To do: change to more palatable units (kWh?)
 	#To do: make custom legend with line size behind marker as well
-    ax1 = Axis(fig_languages[1, 1],
+    ax1_noPython = Axis(fig_languages_noPython[1, 1],
 			  yscale = log10,
 			  xscale = log10,
-			  xticks = LogTicks(WilkinsonTicks(3, k_min=3)), 
-			  title = "Languages, Tiled, R=0.4",
+			  xticks = [200, 300, 400, 500, 600, 700, 800, 900, 1000],
+			  yticks = [0.05, 0.1,1],#for only C/J
+			  title = "Languages, AntikT Tiled, R=0.4",
               xlabel = "Mean number of particles", 
-			  ylabel = "Power consumption (average) [W*s]",
-			  limits = (nothing, nothing, nothing, 10000000000))
+			  ylabel = "Energy consumption (per event, average) [J]",
+			  limits = (nothing, nothing, nothing, 1.1))
 
 	for (i,df) in enumerate(df_list_to_plot_all) 
-		
+		current_color = ColorSchemes.seaborn_colorblind[i]
 		current_label = string(df[1, :backend]*" "*df[1,:backend_version])
-		if (df[1,:backend_version] == "unknown") 
+		if (df[1,:backend] == "C++") 
 			current_label = string(df[1, :backend])
+			current_marker = 'O'
+			current_color = cpp_colors[1]
+		elseif (df[1,:backend] == "Python") 
+			current_label = string(df[1, :backend]*", NumPy "*df[1,:backend_version])
+			current_marker = :cross
+			current_color = python_colors[1]
+		elseif (df[1,:backend] == "Julia") 
+			current_marker = :circle
+			current_color = julia_colors[1]
 		end
 
-		# plot IPMI
-		lines!(ax1, 
-			   df[!, :mean_particles], df[!, :ipmi_power].*df[!,:time_per_event],
-			   color = ColorSchemes.seaborn_colorblind[i])
-		
-		scatter!(ax1, 
-				 df[!, :mean_particles], df[!, :ipmi_power].*df[!,:time_per_event],
-				 color = ColorSchemes.seaborn_colorblind[i], 
-				 marker = marker_labels[i][1], 
+		# plot IPMI		
+		scatterlines!(ax1_noPython, 
+				 df[!, :mean_particles], 
+				 # turning W*us into kW*h into J
+				 df[!, :ipmi_power].*df[!,:time_per_event]./(1000000),#*3600000
+				 color = current_color, 
+				 marker = current_marker, 
 				 label = current_label*", IPMI")
 		
-		# plot RAPL (different line, same marker and column)
-		lines!(ax1, 
-			   df[!, :mean_particles], df[!, :ratp_power].*df[!,:time_per_event],
-			   color = ColorSchemes.seaborn_colorblind[i], linestyle = :dash)
-		
-		scatter!(ax1, 
-				 df[!, :mean_particles], df[!, :ratp_power].*df[!,:time_per_event],
-				 color = ColorSchemes.seaborn_colorblind[i], 
-				 marker = marker_labels[i][1], 
-				 label = current_label*", RAPL")
+		# plot RAPL (different line, same marker and column)		
+		scatterlines!(ax1_noPython, 
+				 df[!, :mean_particles], df[!, :ratp_power].*df[!,:time_per_event]./(1000000),#*3600000
+				 color = current_color, 
+				 marker = current_marker, 
+				 label = current_label*", RAPL",
+			     linestyle = :dash )
 
 	end	
 	
 	axislegend(position = :lt)
+	save(joinpath(plot_output_dir, "languages_best_versions_noPython.png"), fig_languages_noPython)
+
+	fig_languages = Figure()
+	ax1 = Axis(fig_languages[1, 1],
+			  yscale = log10,
+			  xscale = log10,
+			  xticks = [200, 300, 400, 500, 600, 700, 800, 900, 1000],
+			  yticks = [0.1, 1, 10, 100, 500],#for only C/J
+			  title = "Languages, AntikT Tiled, R=0.4",
+              xlabel = "Mean number of particles", 
+			  ylabel = "Energy consumption (per event, average) [J]",
+			  limits = (nothing, nothing, nothing, 1000))
+
+	for i in [2]
+
+		this_subset = select(no_ee_giant_data_frame, 
+					 backend_criterion=backend_criteria[i],
+					 code_criterion = code_criteria[i],
+					 strategy_criterion=this_strategy_criterion,
+					 backend_version_criterion=backend_versions[i],
+					 radius_criterion=this_radius_criterion)
+		push!(df_list_to_plot_all,this_subset)
+		
+	end
+
+	#really need to make this into a function
+	for (i,df) in enumerate(df_list_to_plot_all) 
+		current_color = ColorSchemes.seaborn_colorblind[i]
+		current_label = string(df[1, :backend]*" "*df[1,:backend_version])
+		if (df[1,:backend] == "C++") 
+			current_label = string(df[1, :backend])
+			current_marker = 'O'
+			current_color = cpp_colors[1]
+		elseif (df[1,:backend] == "Python") 
+			current_label = string(df[1, :backend]*", NumPy "*df[1,:backend_version])
+			current_marker = :cross
+			current_color = python_colors[1]
+		elseif (df[1,:backend] == "Julia") 
+			current_marker = :circle
+			current_color = julia_colors[1]
+		end
+
+		# plot IPMI		
+		scatterlines!(ax1, 
+				 df[!, :mean_particles], 
+				 # turning W*us into kW*h into J
+				 df[!, :ipmi_power].*df[!,:time_per_event]./(1000000),#*3600000
+				 color = current_color, 
+				 marker = current_marker, 
+				 label = current_label*", IPMI")
+		
+		# plot RAPL (different line, same marker and column)		
+		scatterlines!(ax1, 
+				 df[!, :mean_particles], df[!, :ratp_power].*df[!,:time_per_event]./(1000000),#*3600000
+				 color = current_color, 
+				 marker = current_marker, 
+				 label = current_label*", RAPL",
+			     linestyle = :dash )
+
+	end
+
+	axislegend(position = :lt)
 	save(joinpath(plot_output_dir, "languages_best_versions.png"), fig_languages)
 	fig_languages
+	
+
+	## Plot of power only (no time per event, W/us)
+	
+	fig_power = Figure()
+	ax1_power = Axis(fig_power[1, 1],
+			  yscale = log10,
+			  xscale = log10,
+			  xticks = [200, 300, 400, 500, 600, 700, 800, 900, 1000],
+			  yticks = [75, 100,200,300,500],
+			  title = "Languages, AntikT Tiled, R=0.4",
+              xlabel = "Mean number of particles", 
+			  ylabel = "Power consumption [W]",
+			  limits = (nothing, nothing, 70, 500))
+
+	#really need to make this into a function
+	for (i,df) in enumerate(df_list_to_plot_all) 
+		current_color = ColorSchemes.seaborn_colorblind[i]
+		current_label = string(df[1, :backend]*" "*df[1,:backend_version])
+		if (df[1,:backend] == "C++") 
+			current_label = string(df[1, :backend])
+			current_marker = 'O'
+			current_color = cpp_colors[1]
+		elseif (df[1,:backend] == "Python") 
+			current_label = string(df[1, :backend]*", NumPy "*df[1,:backend_version])
+			current_marker = :cross
+			current_color = python_colors[1]
+		elseif (df[1,:backend] == "Julia") 
+			current_marker = :circle
+			current_color = julia_colors[1]
+		end
+
+		# plot IPMI		
+		scatterlines!(ax1_power, 
+				 df[!, :mean_particles], 
+				 # turning W*us into kW*h into J
+				 df[!, :ipmi_power],
+				 color = current_color, 
+				 marker = current_marker, 
+				 label = current_label*", IPMI")
+		
+		# plot RAPL (different line, same marker and column)		
+		scatterlines!(ax1_power, 
+				 df[!, :mean_particles], 
+				 df[!, :ratp_power],
+				 color = current_color, 
+				 marker = current_marker, 
+				 label = current_label*", RAPL",
+			     linestyle = :dash )
+
+	end
+
+	axislegend(position = :lt)
+	save(joinpath(plot_output_dir, "languages_best_versions_power.png"), fig_power)
+	fig_power
 
 end
 
@@ -331,19 +511,19 @@ PLUTO_PROJECT_TOML_CONTENTS = """
 CSV = "336ed68f-0bac-5ca0-87d4-7b16caf5d00b"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 ColorSchemes = "35d6a980-a343-548e-a6ea-1d62b119f2f4"
+Colors = "5ae59095-9a9b-59fe-a467-6f913c188581"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DataFramesMeta = "1313f7d8-7da2-5740-9ea0-a2ca25f37964"
 LaTeXStrings = "b964fa9f-0449-5b57-a5c2-d3ea65f4040f"
-Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [compat]
 CSV = "~0.10.14"
 CairoMakie = "~0.12.14"
 ColorSchemes = "~3.26.0"
+Colors = "~0.12.11"
 DataFrames = "~1.7.0"
 DataFramesMeta = "~0.15.4"
 LaTeXStrings = "~1.4.0"
-Makie = "~0.21.14"
 """
 
 # ╔═╡ 00000000-0000-0000-0000-000000000002
@@ -352,7 +532,7 @@ PLUTO_MANIFEST_TOML_CONTENTS = """
 
 julia_version = "1.11.5"
 manifest_format = "2.0"
-project_hash = "5279b69ac2313236978afbee54d10646b69274f6"
+project_hash = "fb7929959419097aec4d937190ab560c7aecf3c9"
 
 [[deps.AbstractFFTs]]
 deps = ["LinearAlgebra"]
@@ -1895,9 +2075,10 @@ version = "3.6.0+0"
 # ╠═9c5e999c-543b-4aee-a765-f959ced2784d
 # ╠═ace11e49-9292-4de0-8388-7ac5f0c95000
 # ╠═03c2f757-0085-4d6c-b417-f784b460646f
+# ╠═cad8bf86-64cc-488a-86e9-20c506f0494a
 # ╠═c682594e-0dbe-419a-8f31-0ad669c0c0d0
 # ╠═7c9190fe-97b8-48bc-83fd-24b5bc36f07b
-# ╟─366c4a1a-6c61-48a7-8863-ff6bc76c255d
+# ╠═366c4a1a-6c61-48a7-8863-ff6bc76c255d
 # ╠═c2be4176-12b8-4dfb-aa89-453c48d68875
 # ╠═28249047-ba7a-4b49-9f98-8031ced4cbf1
 # ╠═ca135efa-059d-4746-87f1-cb6f65a3a6b7
@@ -1909,12 +2090,10 @@ version = "3.6.0+0"
 # ╠═825b6ea0-f196-47bb-b2ac-e16512302465
 # ╠═54c74787-2e83-431a-8db2-4887ed8df151
 # ╠═437bec04-57d5-464f-a6ab-271bbfa0802c
-# ╠═deeb1252-b31a-4717-bf17-db62c4659afd
-# ╠═aff019ee-d121-4042-bb50-0ce4b4525793
 # ╟─252bfebe-f81d-445e-8e72-5e1f4c7c9cad
-# ╠═e5a3744c-810b-43da-b309-cf0ffafdcb0f
+# ╟─e5a3744c-810b-43da-b309-cf0ffafdcb0f
 # ╠═236704a5-ecab-4225-a6d3-165572095f7f
-# ╟─8160be2b-15da-4a09-87be-322f992b4635
+# ╠═8160be2b-15da-4a09-87be-322f992b4635
 # ╠═e868f76a-5654-48ff-b80a-2e222084f432
 # ╠═dafc0dc4-c0be-4696-9f94-a6787b956b86
 # ╠═6fa08726-58a9-4a8e-96eb-215076a3c179

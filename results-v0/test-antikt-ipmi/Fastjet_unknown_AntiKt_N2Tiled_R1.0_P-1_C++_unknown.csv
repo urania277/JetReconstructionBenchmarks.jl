@@ -1,0 +1,7 @@
+File,mean_particles,File_path,n_samples,time_per_event,ipmi_power,ratp_power,total_time,code,code_version,algorithm,strategy,radius,power,backend,backend_version
+events-ee-Z.hepmc3.gz,43.05,data/events-ee-Z.hepmc3.gz,600,24.72,137.3349074196572,68.65675296264138,1.783134735e6,Fastjet,unknown,AntiKt,N2Tiled,1.0,-1,C++,unknown
+events-pp-2TeV.hepmc3.gz,226.98,data/events-pp-2TeV.hepmc3.gz,600,157.5,152.15020342214066,76.69641271053997,9.772494495000001e6,Fastjet,unknown,AntiKt,N2Tiled,1.0,-1,C++,unknown
+events-pp-8TeV-20GeV.hepmc3.gz,354.18,data/events-pp-8TeV-20GeV.hepmc3.gz,600,278.72,152.46559822564586,76.93680040693113,1.7096864102e7,Fastjet,unknown,AntiKt,N2Tiled,1.0,-1,C++,unknown
+events-pp-13TeV-20GeV.hepmc3.gz,431.18,data/events-pp-13TeV-20GeV.hepmc3.gz,600,359.29,152.85273371545594,77.17974029249757,2.2066623437e7,Fastjet,unknown,AntiKt,N2Tiled,1.0,-1,C++,unknown
+events-pp-20TeV-50GeV.hepmc3.gz,553.64,data/events-pp-20TeV-50GeV.hepmc3.gz,600,518.12,154.6147080400736,77.33027456140523,3.1610866803e7,Fastjet,unknown,AntiKt,N2Tiled,1.0,-1,C++,unknown
+events-pp-30TeV-50GeV.hepmc3.gz,632.29,data/events-pp-30TeV-50GeV.hepmc3.gz,600,613.97,154.45905640656585,77.51447922081866,3.7560749595e7,Fastjet,unknown,AntiKt,N2Tiled,1.0,-1,C++,unknown

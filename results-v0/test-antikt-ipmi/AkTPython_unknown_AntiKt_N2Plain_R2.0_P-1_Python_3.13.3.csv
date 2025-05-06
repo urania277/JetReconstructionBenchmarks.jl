@@ -1,0 +1,7 @@
+File,mean_particles,File_path,n_samples,time_per_event,ipmi_power,ratp_power,total_time,code,code_version,algorithm,strategy,radius,power,backend,backend_version
+events-ee-Z.hepmc3.gz,43.05,data/events-ee-Z.hepmc3.gz,8,2259.59,141.73020893164784,72.61746393832897,2.652863823e6,AkTPython,unknown,AntiKt,N2Plain,2.0,-1,Python,3.13.3
+events-pp-2TeV.hepmc3.gz,226.98,data/events-pp-2TeV.hepmc3.gz,8,43495.23,153.22519581504233,77.60140932588575,3.7277078730000004e7,AkTPython,unknown,AntiKt,N2Plain,2.0,-1,Python,3.13.3
+events-pp-8TeV-20GeV.hepmc3.gz,354.18,data/events-pp-8TeV-20GeV.hepmc3.gz,8,106460.38,153.9538334645515,77.65740747374315,8.909223156e7,AkTPython,unknown,AntiKt,N2Plain,2.0,-1,Python,3.13.3
+events-pp-13TeV-20GeV.hepmc3.gz,431.18,data/events-pp-13TeV-20GeV.hepmc3.gz,8,154453.23,155.34081904922573,78.26556182721528,1.28283094002e8,AkTPython,unknown,AntiKt,N2Plain,2.0,-1,Python,3.13.3
+events-pp-20TeV-50GeV.hepmc3.gz,553.64,data/events-pp-20TeV-50GeV.hepmc3.gz,8,257062.19,154.34479405478388,78.10456384158613,2.12490889747e8,AkTPython,unknown,AntiKt,N2Plain,2.0,-1,Python,3.13.3
+events-pp-30TeV-50GeV.hepmc3.gz,632.29,data/events-pp-30TeV-50GeV.hepmc3.gz,8,327612.03,154.2637001097434,77.81054581994371,2.69807792527e8,AkTPython,unknown,AntiKt,N2Plain,2.0,-1,Python,3.13.3

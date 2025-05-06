@@ -1,0 +1,7 @@
+File,mean_particles,File_path,n_samples,time_per_event,ipmi_power,ratp_power,total_time,code,code_version,algorithm,strategy,radius,power,backend,backend_version
+events-ee-Z.hepmc3.gz,43.05,data/events-ee-Z.hepmc3.gz,600,16.4349,0.0,0.0,1.0473614370000012e6,JetReconstruction,unknown,AntiKt,N2Plain,0.5,-1,Julia,1.10.9
+events-pp-2TeV.hepmc3.gz,226.98,data/events-pp-2TeV.hepmc3.gz,600,221.66173999999998,154.47737601228775,78.78994790601745,1.3658997164e7,JetReconstruction,unknown,AntiKt,N2Plain,0.5,-1,Julia,1.10.9
+events-pp-8TeV-20GeV.hepmc3.gz,354.18,data/events-pp-8TeV-20GeV.hepmc3.gz,600,522.37987,154.94790182722744,78.0129422453832,3.1867081313000012e7,JetReconstruction,unknown,AntiKt,N2Plain,0.5,-1,Julia,1.10.9
+events-pp-13TeV-20GeV.hepmc3.gz,431.18,data/events-pp-13TeV-20GeV.hepmc3.gz,600,741.4449099999999,154.31771880905544,77.8947852841769,4.5083994714000046e7,JetReconstruction,unknown,AntiKt,N2Plain,0.5,-1,Julia,1.10.9
+events-pp-20TeV-50GeV.hepmc3.gz,553.64,data/events-pp-20TeV-50GeV.hepmc3.gz,600,1219.01015,156.04793206162844,78.34961868251284,7.422273787399995e7,JetReconstruction,unknown,AntiKt,N2Plain,0.5,-1,Julia,1.10.9
+events-pp-30TeV-50GeV.hepmc3.gz,632.29,data/events-pp-30TeV-50GeV.hepmc3.gz,600,1536.1889,156.81484005007263,78.47839173374875,9.333361719299997e7,JetReconstruction,unknown,AntiKt,N2Plain,0.5,-1,Julia,1.10.9
